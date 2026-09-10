@@ -1,0 +1,28 @@
+# Week {{week}} / C ({{difficulty_label}}) — (제목)
+
+(무엇을 구현하는지 한두 문단)
+
+## 시그니처
+
+```c
+int solve(const int *values, int n, int *out, int out_capacity);
+```
+
+- 반환: `out` 에 쓴 개수. 오류거나 용량이 모자라면 `-1`.
+
+## 조건
+
+- (제약 1)
+- 할당한 메모리는 반환 전에 전부 해제한다.
+
+## 채점
+
+```sh
+uv run runner.py test {{week_num}} --task {{task}}
+```
+
+테스트는 `solution.c` 를 공유 라이브러리로 빌드해 ctypes 로 직접 호출한다.
+
+## 생각해 볼 것
+
+- (스스로 답해 볼 질문)

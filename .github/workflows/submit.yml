@@ -1,0 +1,53 @@
+name: submit
+
+# Actions 탭에서 주차를 골라 돌리면 제출용 zip 이 아티팩트로 나온다.
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "주차 (1, week_01, linked_list)"
+        required: true
+        default: "1"
+      name:
+        description: "파일 이름 뒤에 붙일 이름/학번 (선택)"
+        required: false
+        default: ""
+      with_problem:
+        description: "problem.md 도 함께 넣기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  zip:
+    name: 제출 파일 만들기
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: 의존성 설치
+        run: uv sync --locked
+
+      - name: zip 생성
+        env:
+          WEEK: ${{ inputs.week }}
+          STUDENT: ${{ inputs.name }}
+          WITH_PROBLEM: ${{ inputs.with_problem }}
+        run: |
+          args=(submit "$WEEK")
+          [ -n "$STUDENT" ] && args+=(--name "$STUDENT")
+          [ "$WITH_PROBLEM" = "true" ] && args+=(--with-problem)
+          uv run runner.py "${args[@]}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submission
+          path: submissions/*.zip
+          if-no-files-found: error

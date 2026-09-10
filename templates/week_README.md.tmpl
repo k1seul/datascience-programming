@@ -1,0 +1,20 @@
+# Week {{week}} — {{topic}}
+
+(이번 주에 무엇을 왜 하는지 두세 줄)
+
+| 과제 | 언어 | 난이도 | 내용 |
+|---|---|---|---|
+{{rows}}
+
+## 채점
+
+```sh
+uv run runner.py test {{week_num}}                  # 전부
+uv run runner.py test {{week_num}} --lang c         # 언어별
+uv run runner.py test {{week_num}} --task <문제이름>  # 과제 하나
+```
+
+## 이번 주에 붙잡을 감각
+
+- (핵심 개념 1)
+- (핵심 개념 2)

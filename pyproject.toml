@@ -1,0 +1,40 @@
+[project]
+name = "weekly-coding-exercises"
+version = "0.1.0"
+description = "매주 하나의 문제를 Python / C / C++ 세 언어로 풀고 pytest로 채점하는 연습장"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-timeout>=2.3",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+python_files = ["tests.py", "test_*.py"]
+testpaths = ["exercises"]
+norecursedirs = ["templates", "build", ".venv", ".git"]
+addopts = "-q --strict-markers"
+# 포인터를 잘못 이으면 무한 루프가 나기 쉽다. thread 방식이라 C 안에서 도는 루프도 잡는다.
+timeout = 20
+timeout_method = "thread"
+markers = [
+    "python: Python 과제",
+    "c: C 과제",
+    "cpp: C++ 과제",
+    "impl: 자료구조를 직접 구현하는 과제",
+    "easy: 쉬움",
+    "medium: 중간",
+    "hard: 어려움",
+]
+
+[tool.ruff]
+line-length = 100
+# 문제 설명(.md) 안의 코드 블록은 정렬을 의도한 것이라 포매터가 건드리지 않게 한다.
+exclude = ["templates", "build", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

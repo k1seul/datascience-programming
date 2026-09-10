@@ -1,0 +1,57 @@
+name: tests
+
+# 누가 올리든(포크·PR 포함) 자동으로 채점한다.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  grade:
+    name: 채점
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: 컴파일러 확인
+        run: |
+          cc --version | head -1
+          c++ --version | head -1
+
+      - name: 의존성 설치
+        run: uv sync --locked
+
+      # 아직 TODO 가 남은 과제는 실패로 치지 않는다. 손댔는데 틀렸거나
+      # 무한 루프로 멈춘 과제만 빨간불이 된다. 결과 표는 실행 요약에 붙는다.
+      - name: 채점
+        run: uv run runner.py ci
+
+  lint:
+    name: 린트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: 의존성 설치
+        run: uv sync --locked
+
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .

@@ -1,0 +1,584 @@
+#!/usr/bin/env python3
+"""주간 코딩 연습 러너.
+
+    uv run runner.py list                        # 주차/과제 현황
+    uv run runner.py show 1 detect_cycle         # 문제 설명 출력
+    uv run runner.py test 1 --lang c             # 채점
+    uv run runner.py new --topic "이진 탐색 트리" --slug binary_search_tree
+
+채점은 전부 pytest 로 돌아간다. 이 스크립트는 pytest 를 부르는 껍데기일 뿐이라,
+`uv run pytest exercises/week_01_linked_list -m cpp` 처럼 직접 불러도 똑같이 동작한다.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import unicodedata
+import xml.etree.ElementTree as ET
+import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+EXERCISES = ROOT / "exercises"
+SUBMISSIONS = ROOT / "submissions"
+TEMPLATES = ROOT / "templates"
+
+WEEK_RE = re.compile(r"^week_(\d+)(?:_(\w+))?$")
+
+LANGUAGES = ["c", "cpp", "python"]
+LANG_LABEL = {"c": "C", "cpp": "C++", "python": "Python"}
+LANG_SUFFIX = {"c": ".c", "cpp": ".cpp", "python": ".py"}
+DIFFICULTIES = ["impl", "easy", "medium", "hard"]
+DIFFICULTY_LABEL = {"impl": "구현", "easy": "쉬움", "medium": "중간", "hard": "어려움"}
+DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
+# 제출 압축에서 빼는 파일 — 채점기가 들고 있는 것들.
+SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py"}
+STATUS_ICON = {
+    "pass": "✅",
+    "fail": "❌",
+    "crash": "💥",
+    "pending": "⬜",
+    "skipped": "⏭️",
+    "empty": "—",
+}
+STATUS_LABEL = {
+    "pass": "통과",
+    "fail": "실패",
+    "crash": "중단됨 (무한 루프 / 세그폴트?)",
+    "pending": "미착수",
+    "skipped": "건너뜀",
+    "empty": "테스트 없음",
+}
+
+USE_COLOR = sys.stdout.isatty()
+GREEN, RED, YELLOW, DIM, BOLD = "32", "31", "33", "2", "1"
+
+
+def paint(text: str, code: str) -> str:
+    return f"\033[{code}m{text}\033[0m" if USE_COLOR else text
+
+
+def display_width(text: str) -> int:
+    """한글처럼 두 칸을 차지하는 글자를 감안한 폭."""
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in text)
+
+
+def pad(text: str, width: int) -> str:
+    return text + " " * max(0, width - display_width(text))
+
+
+@dataclass(frozen=True)
+class Task:
+    """`<주차>/<언어>/<난이도>_<문제이름>/` 하나."""
+
+    path: Path
+
+    @property
+    def name(self) -> str:
+        return self.path.name
+
+    @property
+    def language(self) -> str:
+        return self.path.parent.name
+
+    @property
+    def difficulty(self) -> str:
+        return self.name.partition("_")[0]
+
+    @property
+    def slug(self) -> str:
+        """난이도 접두어를 뗀 문제 이름."""
+        return self.name.partition("_")[2] or self.name
+
+    @property
+    def ref(self) -> str:
+        return f"{self.language}/{self.name}"
+
+    @property
+    def difficulty_label(self) -> str:
+        return DIFFICULTY_LABEL.get(self.difficulty, self.difficulty)
+
+    @property
+    def sources(self) -> list[Path]:
+        suffix = LANG_SUFFIX.get(self.language, "")
+        return [p for p in sorted(self.path.glob(f"*{suffix}")) if p.name != "tests.py"]
+
+    def untouched(self) -> bool:
+        """제출 파일에 TODO 가 그대로 남아 있으면 미착수로 본다."""
+        return any("TODO" in src.read_text(encoding="utf-8") for src in self.sources)
+
+    def matches(self, token: str) -> bool:
+        token = token.strip("/")
+        return token in {self.name, self.slug, self.ref, f"{self.language}/{self.slug}"}
+
+
+def _task_order(task: Task) -> tuple[int, str]:
+    known = task.difficulty in DIFFICULTIES
+    rank = DIFFICULTIES.index(task.difficulty) if known else len(DIFFICULTIES)
+    return rank, task.name
+
+
+@dataclass(frozen=True)
+class Week:
+    path: Path
+
+    @property
+    def name(self) -> str:
+        return self.path.name
+
+    @property
+    def number(self) -> int:
+        return int(WEEK_RE.match(self.name).group(1))
+
+    @property
+    def slug(self) -> str:
+        return WEEK_RE.match(self.name).group(2) or ""
+
+    @property
+    def topic(self) -> str:
+        """주차 README 의 제목에서 '— ' 뒤쪽을 토픽으로 읽는다."""
+        readme = self.path / "README.md"
+        if not readme.exists():
+            return self.slug.replace("_", " ")
+        for line in readme.read_text(encoding="utf-8").splitlines():
+            if line.startswith("# "):
+                return line[2:].split("—", 1)[-1].strip()
+        return self.slug.replace("_", " ")
+
+    def tasks(self, language: str | None = None) -> list[Task]:
+        found: list[Task] = []
+        for lang in LANGUAGES if language is None else [language]:
+            lang_dir = self.path / lang
+            if not lang_dir.is_dir():
+                continue
+            tasks = [Task(p) for p in lang_dir.iterdir() if (p / "tests.py").exists()]
+            found += sorted(tasks, key=_task_order)
+        return found
+
+
+def weeks() -> list[Week]:
+    if not EXERCISES.exists():
+        return []
+    found = [Week(p) for p in EXERCISES.iterdir() if p.is_dir() and WEEK_RE.match(p.name)]
+    return sorted(found, key=lambda w: w.number)
+
+
+def resolve_week(token: str) -> Week:
+    """'1', '01', 'week_01', 'week_01_linked_list', 'linked_list' 을 모두 받아들인다."""
+    token = token.strip().strip("/")
+    found = weeks()
+    for week in found:
+        if token in {week.name, week.slug, str(week.number), f"{week.number:02d}"}:
+            return week
+        if token.isdigit() and int(token) == week.number:
+            return week
+    known = ", ".join(w.name for w in found) or "(없음)"
+    raise SystemExit(f"'{token}' 주차를 찾을 수 없습니다. 있는 주차: {known}")
+
+
+def resolve_task(week: Week, token: str) -> Task:
+    matched = [t for t in week.tasks() if t.matches(token)]
+    if len(matched) == 1:
+        return matched[0]
+    known = ", ".join(t.ref for t in week.tasks())
+    if not matched:
+        raise SystemExit(f"'{token}' 과제를 찾을 수 없습니다. 있는 과제: {known}")
+    raise SystemExit(f"'{token}' 이 여러 과제와 겹칩니다: {', '.join(t.ref for t in matched)}")
+
+
+# 테스트별 타임아웃(pytest-timeout)이 먼저 걸리지만, 그마저 안 먹을 때를 위한 뒷문.
+GRADE_TIMEOUT = 300
+
+
+def run_pytest(
+    targets: list[Path], extra: list[str], quiet: bool = False
+) -> subprocess.CompletedProcess:
+    cmd = [sys.executable, "-m", "pytest", *[str(t) for t in targets], *extra]
+    if not quiet:
+        return subprocess.run(cmd, cwd=ROOT)
+    try:
+        return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=GRADE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(cmd, returncode=124, stdout="", stderr="timeout")
+
+
+def read_junit(report: Path) -> dict[str, int]:
+    empty = dict.fromkeys(["tests", "failures", "errors", "skipped"], 0)
+    if not report.exists():
+        return empty
+    root = ET.parse(report).getroot()
+    suite = root.find("testsuite") if root.tag == "testsuites" else root
+    if suite is None:
+        return empty
+    return {key: int(suite.get(key, 0)) for key in empty}
+
+
+@dataclass(frozen=True)
+class Result:
+    """과제 하나의 채점 결과."""
+
+    tests: int
+    failures: int
+    errors: int
+    skipped: int
+    returncode: int
+    untouched: bool
+
+    @property
+    def bad(self) -> int:
+        return self.failures + self.errors
+
+    @property
+    def passed(self) -> int:
+        return self.tests - self.bad - self.skipped
+
+    @property
+    def status(self) -> str:
+        """crash(중단) / empty(테스트 없음) / skipped / pass / pending(미착수) / fail."""
+        if self.returncode == 5:
+            return "empty"
+        # 타임아웃(무한 루프)이나 세그폴트면 pytest 가 리포트를 남기지 못하고 죽는다.
+        if self.returncode not in (0, 1) or (self.tests == 0 and self.returncode != 0):
+            return "crash"
+        if self.tests == 0:
+            return "empty"
+        if self.bad == 0:
+            return "skipped" if self.skipped and self.passed == 0 else "pass"
+        return "pending" if self.untouched else "fail"
+
+
+def grade(task: Task) -> Result:
+    """과제 하나를 조용히 채점한다.
+
+    pytest 의 요약 문구를 파싱하는 대신 junit-xml 리포트에서 정확한 수를 읽는다.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        report = Path(tmp) / "report.xml"
+        proc = run_pytest(
+            [task.path],
+            ["-q", "--tb=no", "-p", "no:cacheprovider", "--junit-xml", str(report)],
+            quiet=True,
+        )
+        counts = read_junit(report)
+    return Result(**counts, returncode=proc.returncode, untouched=task.untouched())
+
+
+def format_result(result: Result) -> str:
+    if result.status == "crash":
+        return paint(STATUS_LABEL["crash"], RED)
+    if result.status == "empty":
+        return paint("테스트 없음", DIM)
+    if result.status == "skipped":
+        return paint("건너뜀", YELLOW)
+    if result.status == "pass":
+        return paint(f"통과 {result.passed}/{result.tests}", GREEN)
+    if result.status == "pending":
+        return paint(f"미착수 {result.passed}/{result.tests}", YELLOW)
+    return paint(f"실패 {result.bad}개 (통과 {result.passed}/{result.tests})", RED)
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    found = weeks()
+    if not found:
+        print('아직 주차가 없습니다. `uv run runner.py new --topic "..."` 로 시작하세요.')
+        return 0
+
+    for week in found:
+        print(paint(f"{week.name} — {week.topic}", BOLD))
+        tasks = week.tasks()
+        if not tasks:
+            print("  (과제 없음)")
+            continue
+        for language in LANGUAGES:
+            in_language = [t for t in tasks if t.language == language]
+            if not in_language:
+                continue
+            print(f"  {paint(LANG_LABEL[language], DIM)}")
+            for task in in_language:
+                if args.fast:
+                    status = paint("미착수", YELLOW) if task.untouched() else paint("작성됨", DIM)
+                else:
+                    status = format_result(grade(task))
+                print(f"    {pad(task.name, 30)} {pad(task.difficulty_label, 6)} {status}")
+        print()
+    return 0
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    week = resolve_week(args.week)
+    if args.task:
+        path = resolve_task(week, args.task).path / "problem.md"
+    else:
+        path = week.path / "README.md"
+    if not path.exists():
+        raise SystemExit(f"{path.relative_to(ROOT)} 가 없습니다")
+    print(path.read_text(encoding="utf-8"))
+    return 0
+
+
+def cmd_test(args: argparse.Namespace) -> int:
+    if args.week:
+        week = resolve_week(args.week)
+        targets = [resolve_task(week, args.task).path] if args.task else [week.path]
+    elif args.task:
+        raise SystemExit("--task 를 쓰려면 주차도 함께 지정하세요 (예: test 1 --task detect_cycle)")
+    else:
+        targets = [EXERCISES]
+
+    extra: list[str] = []
+    if args.lang:
+        extra += ["-m", args.lang]
+    if args.k:
+        extra += ["-k", args.k]
+    if args.verbose:
+        extra.append("-v")
+    extra += args.pytest_args
+
+    proc = run_pytest(targets, extra)
+    return 0 if proc.returncode in (0, 5) else proc.returncode
+
+
+def cmd_ci(args: argparse.Namespace) -> int:
+    """CI 용 채점. 손댄 과제가 틀렸을 때만 실패로 끝낸다.
+
+    아직 TODO 가 남은 과제(미착수)는 실패가 아니다 — 안 푼 문제 때문에 CI 가
+    항상 빨간불이면 신호로서 쓸모가 없다.
+    """
+    targets = [resolve_week(args.week)] if args.week else weeks()
+    if not targets:
+        print("채점할 주차가 없습니다.")
+        return 0
+
+    rows: list[tuple[Week, Task, Result]] = []
+    for week in targets:
+        for task in week.tasks():
+            rows.append((week, task, grade(task)))
+
+    for week, task, result in rows:
+        icon = STATUS_ICON[result.status]
+        counts = f"{result.passed}/{result.tests}" if result.tests else "-"
+        print(f"{icon} {week.name} · {task.ref:<40} {STATUS_LABEL[result.status]} {counts}")
+
+    tally = {status: 0 for status in STATUS_ICON}
+    for _, _, result in rows:
+        tally[result.status] += 1
+    broken = tally["fail"] + tally["crash"]
+    print(
+        f"\n통과 {tally['pass']} · 실패 {broken} · 미착수 {tally['pending']}"
+        f" · 건너뜀 {tally['skipped']} (과제 {len(rows)}개)"
+    )
+
+    write_github_summary(rows, tally)
+    return 1 if broken else 0
+
+
+def write_github_summary(rows: list[tuple[Week, Task, Result]], tally: dict[str, int]) -> None:
+    """GitHub Actions 실행 요약 페이지에 표를 붙인다 (CI 밖에서는 아무 일도 안 한다)."""
+    target = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not target:
+        return
+    lines = [
+        "## 채점 결과",
+        "",
+        f"통과 **{tally['pass']}** · 실패 **{tally['fail'] + tally['crash']}**"
+        f" · 미착수 **{tally['pending']}**",
+        "",
+        "| | 주차 | 과제 | 언어 | 난이도 | 결과 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for week, task, result in rows:
+        counts = f"{result.passed}/{result.tests}" if result.tests else "-"
+        lines.append(
+            f"| {STATUS_ICON[result.status]} | {week.name} | `{task.name}` "
+            f"| {LANG_LABEL.get(task.language, task.language)} | {task.difficulty_label} "
+            f"| {STATUS_LABEL[result.status]} {counts} |"
+        )
+    lines += ["", "⬜ 는 아직 `TODO` 가 남은 과제라 실패로 치지 않습니다."]
+    with open(target, "a", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+def cmd_submit(args: argparse.Namespace) -> int:
+    """제출용 zip 을 만든다 — 내가 쓴 코드만, 채점 테스트는 빼고."""
+    week = resolve_week(args.week)
+    tasks = [resolve_task(week, args.task)] if args.task else week.tasks()
+    if not tasks:
+        raise SystemExit(f"{week.name} 에 과제가 없습니다")
+
+    if not args.no_check:
+        print("채점 중...")
+        for task in tasks:
+            print(f"  {pad(task.ref, 42)} {format_result(grade(task))}")
+        print()
+
+    pending = [t for t in tasks if t.untouched()]
+    if pending:
+        print(paint(f"주의: 아직 TODO 가 남은 과제 {len(pending)}개가 들어갑니다", YELLOW))
+        for task in pending:
+            print(f"  - {task.ref}")
+        print()
+
+    stem = week.name if not args.name else f"{week.name}_{args.name}"
+    SUBMISSIONS.mkdir(exist_ok=True)
+    archive = SUBMISSIONS / f"{stem}.zip"
+
+    packed: list[str] = []
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+        for task in tasks:
+            for path in sorted(task.path.rglob("*")):
+                if path.is_dir() or "__pycache__" in path.parts:
+                    continue
+                if path.name in SUBMIT_SKIP:
+                    continue
+                if path.suffix == ".md" and not args.with_problem:
+                    continue
+                arcname = Path(stem) / path.relative_to(week.path)
+                zf.write(path, arcname)
+                packed.append(str(arcname))
+
+    print(f"{archive.relative_to(ROOT)} ({archive.stat().st_size:,} B)")
+    for name in packed:
+        print(f"  {name}")
+    return 0
+
+
+def render(template: Path, mapping: dict[str, str]) -> str:
+    text = template.read_text(encoding="utf-8")
+    for key, value in mapping.items():
+        text = text.replace(f"{{{{{key}}}}}", value)
+    return text
+
+
+def slugify(text: str) -> str:
+    slug = re.sub(r"\W+", "_", text.strip(), flags=re.ASCII).strip("_").lower()
+    return slug
+
+
+def parse_task_spec(spec: str) -> tuple[str, str]:
+    """'cpp/medium_validate_bst' 또는 'cpp/medium' 을 (언어, 디렉터리 이름) 으로."""
+    language, _, name = spec.strip().strip("/").partition("/")
+    if language not in LANGUAGES:
+        raise SystemExit(f"언어는 {', '.join(LANGUAGES)} 중 하나여야 합니다: {spec}")
+    if not name:
+        raise SystemExit(f"'<언어>/<난이도>[_문제이름]' 형식으로 적어 주세요: {spec}")
+    if name.partition("_")[0] not in DIFFICULTIES:
+        raise SystemExit(f"난이도는 {', '.join(DIFFICULTIES)} 중 하나여야 합니다: {spec}")
+    return language, name
+
+
+def cmd_new(args: argparse.Namespace) -> int:
+    existing = weeks()
+    number = args.week or (existing[-1].number + 1 if existing else 1)
+    slug = args.slug or slugify(args.topic)
+    if not slug:
+        raise SystemExit(
+            "토픽이 한글이면 폴더 이름으로 쓸 --slug 를 함께 주세요 (예: --slug binary_search_tree)"
+        )
+
+    week_dir = EXERCISES / f"week_{number:02d}_{slug}"
+    if week_dir.exists():
+        raise SystemExit(f"{week_dir.relative_to(ROOT)} 가 이미 있습니다")
+
+    specs = [parse_task_spec(s) for s in args.tasks.split(",") if s.strip()]
+    base = {"week": f"{number:02d}", "week_num": str(number), "topic": args.topic, "slug": slug}
+
+    week_dir.mkdir(parents=True)
+    (week_dir / "__init__.py").write_text("", encoding="utf-8")
+    rows = "\n".join(
+        f"| [`{lang}/{name}`]({lang}/{name}/problem.md) | {LANG_LABEL[lang]} "
+        f"| {DIFFICULTY_LABEL.get(name.partition('_')[0], '')} | (제목) |"
+        for lang, name in specs
+    )
+    (week_dir / "README.md").write_text(
+        render(TEMPLATES / "week_README.md.tmpl", {**base, "rows": rows}), encoding="utf-8"
+    )
+
+    for language, name in specs:
+        lang_dir = week_dir / language
+        lang_dir.mkdir(exist_ok=True)
+        (lang_dir / "__init__.py").write_text("", encoding="utf-8")
+        task_dir = lang_dir / name
+        task_dir.mkdir()
+        (task_dir / "__init__.py").write_text("", encoding="utf-8")
+        difficulty = name.partition("_")[0]
+        mapping = {
+            **base,
+            "task": f"{language}/{name}",
+            "lang": language,
+            "lang_label": LANG_LABEL[language],
+            "difficulty": difficulty,
+            "difficulty_label": DIFFICULTY_LABEL.get(difficulty, difficulty),
+        }
+        for template in sorted((TEMPLATES / f"task_{language}").glob("*.tmpl")):
+            target = task_dir / template.name.removesuffix(".tmpl")
+            target.write_text(render(template, mapping), encoding="utf-8")
+
+    print(f"{week_dir.relative_to(ROOT)} 생성:")
+    for path in sorted(week_dir.rglob("*")):
+        if path.is_file() and path.name != "__init__.py":
+            print(f"  {path.relative_to(ROOT)}")
+    print(f"\n문제를 채운 뒤: uv run runner.py test {number}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="runner.py",
+        description="주간 코딩 연습 — 현황 확인, 채점, 새 주차 생성",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_list = sub.add_parser("list", help="주차/과제 현황")
+    p_list.add_argument("--fast", action="store_true", help="테스트를 돌리지 않고 착수 여부만 표시")
+    p_list.set_defaults(func=cmd_list)
+
+    p_show = sub.add_parser("show", help="문제 설명 출력")
+    p_show.add_argument("week", help="주차 (1, week_01, linked_list)")
+    p_show.add_argument("task", nargs="?", help="과제 (detect_cycle, python/medium_detect_cycle)")
+    p_show.set_defaults(func=cmd_show)
+
+    p_test = sub.add_parser("test", help="채점")
+    p_test.add_argument("week", nargs="?", help="주차 (생략하면 전체)")
+    p_test.add_argument("--lang", choices=LANGUAGES, help="언어로 거르기")
+    p_test.add_argument("--task", help="과제 하나만 (예: detect_cycle)")
+    p_test.add_argument("-k", help="pytest -k 표현식")
+    p_test.add_argument("-v", "--verbose", action="store_true")
+    p_test.add_argument("pytest_args", nargs="*", help="pytest 로 그대로 넘길 인자")
+    p_test.set_defaults(func=cmd_test)
+
+    p_ci = sub.add_parser("ci", help="CI 채점 (미착수는 실패로 치지 않음)")
+    p_ci.add_argument("week", nargs="?", help="주차 (생략하면 전체)")
+    p_ci.set_defaults(func=cmd_ci)
+
+    p_submit = sub.add_parser("submit", help="제출용 zip 만들기")
+    p_submit.add_argument("week", help="주차 (1, week_01, linked_list)")
+    p_submit.add_argument("--task", help="과제 하나만")
+    p_submit.add_argument("--name", help="파일 이름 뒤에 붙일 이름/학번")
+    p_submit.add_argument("--with-problem", action="store_true", help="problem.md 도 함께 넣기")
+    p_submit.add_argument("--no-check", action="store_true", help="압축 전에 채점하지 않기")
+    p_submit.set_defaults(func=cmd_submit)
+
+    p_new = sub.add_parser("new", help="새 주차 뼈대 생성")
+    p_new.add_argument("--topic", required=True, help="이번 주 토픽 (예: 이진 탐색 트리)")
+    p_new.add_argument("--slug", help="폴더 이름에 쓸 영문 슬러그 (예: binary_search_tree)")
+    p_new.add_argument("--week", type=int, help="주차 번호 (생략하면 마지막 + 1)")
+    p_new.add_argument(
+        "--tasks",
+        default=DEFAULT_TASKS,
+        help=f"쉼표로 구분한 '<언어>/<난이도>[_문제이름]' 목록 (기본: {DEFAULT_TASKS})",
+    )
+    p_new.set_defaults(func=cmd_new)
+
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
