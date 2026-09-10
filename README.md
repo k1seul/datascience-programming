@@ -225,33 +225,3 @@ Actions 탭에서 **submit** 워크플로를 고르고 Run workflow 를 누르�
 다른 컴퓨터에서 받아 그대로 제출하시면 됩니다.
 
 `submissions/` 폴더는 `.gitignore` 에 들어 있어서 저장소에는 올라가지 않습니다.
-
-## 새 주차 만들기
-
-```sh
-uv run runner.py new --topic "이진 탐색 트리" --slug binary_search_tree
-uv run runner.py new --topic "정렬" --slug sorting \
-  --tasks c/impl_merge_sort,python/easy_kth_largest,python/medium_sort_colors
-```
-
-`--tasks` 에는 `<언어>/<난이도>[_문제이름]` 을 쉼표로 이어서 적습니다.
-기본값은 `c/impl,cpp/easy,cpp/medium,python/easy,python/medium` 이고,
-문제 이름을 아직 정하지 못했다면 난이도만 적어 두었다가 나중에 폴더 이름만 바꾸어도 됩니다.
-
-만든 다음에는 각 `problem.md` 를 채우고, `tests.py` 의 빈 케이스 목록에 채점 케이스를 적으면 됩니다.
-`solution.*` 는 `TODO` 가 남은 채로 두세요.
-
-## 몇 가지 약속
-
-- `tests.py` 와 `list.h` 처럼 "수정하지 않습니다" 라고 적힌 파일은 그대로 두세요.
-  테스트를 고쳐서 통과시키면 그 주의 연습이 의미가 없어집니다.
-- 문제마다 붙어 있는 **생각해 볼 것** 에는 짧게라도 답을 적어 두시길 권합니다.
-  나중에 같은 자료구조를 다시 만났을 때 훨씬 빨리 기억이 돌아옵니다.
-- 막히면 언어를 바꿔서 같은 주의 다른 과제를 먼저 풀어 보세요. 대개 같은 아이디어를 묻고 있습니다.
-
-## 필요한 것 정리
-
-- **Python** 3.13 이상 (uv 가 알아서 설치해 줍니다)
-- **uv** ([설치 방법](#2-uv-설치하기))
-- **C, C++ 컴파일러** (`cc`, `c++`). 없으면 해당 과제만 skip 되니 파이썬 과제는 그대로 진행됩니다.
-  다른 컴파일러를 쓰고 싶으시면 `CC`, `CXX` 환경변수로 지정하실 수 있습니다
