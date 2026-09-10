@@ -169,6 +169,7 @@ C 구현 과제에서는 `list_create()` 가 `NULL` 을 돌려주는 것이 같�
 | `uv run runner.py list` | 주차별 과제와 채점 결과를 한눈에 봅니다 (`--fast` 를 붙이면 착수 여부만) |
 | `uv run runner.py show 1 [과제]` | 문제 설명을 출력합니다 (과제 이름을 빼면 주차 개요) |
 | `uv run runner.py test [주차]` | 채점합니다. `--lang cpp`, `--task detect_cycle`, `-k 표현식` 으로 범위를 좁힐 수 있습니다 |
+| `uv run runner.py sync` | 새로 올라온 주차를 받아옵니다 |
 | `uv run runner.py submit 1` | 제출용 zip 을 만듭니다 (`submissions/` 에 생깁니다) |
 | `uv run runner.py ci` | CI 와 같은 방식으로 채점합니다 (미착수는 실패로 보지 않습니다) |
 | `uv run runner.py new --topic "..."` | 다음 주차 폴더를 만듭니다 |
@@ -218,6 +219,32 @@ uv run runner.py ci        # 실패나 중단이 하나라도 있으면 종료 �
 
 린트(`ruff check`, `ruff format --check`)도 함께 돕니다.
 맨 위 배지가 그 결과이고, 포크해서 쓰신다면 배지 주소의 `k1seul/datascience-programming` 부분만 자기 저장소로 바꾸면 됩니다.
+
+## 새 문제 받아오기
+
+새 주차가 올라오면 이 한 줄이면 됩니다.
+
+```sh
+uv run runner.py sync
+```
+
+fork 하셨든 clone 만 하셨든 알아서 처리합니다.
+fork 한 경우 원본 저장소를 가리키는 리모트가 없으면 자동으로 추가하고,
+clone 만 하신 경우에는 이미 `origin` 이 수업 저장소이므로 그대로 씁니다.
+
+받아오기 전에 무엇이 올라왔는지만 보고 싶으시면 `--check` 를 붙이세요.
+
+```sh
+uv run runner.py sync --check
+```
+
+**이미 푼 답은 그대로 남습니다.** 새 주차는 새 폴더로 들어오기 때문에 여러분이 고친 파일과
+겹칠 일이 없습니다. 다만 두 가지 경우에는 멈추고 안내를 보여 드립니다.
+
+- **커밋하지 않은 수정이 있을 때** — 먼저 커밋하거나 `git stash` 로 치워 두세요.
+- **충돌이 났을 때** — 이미 푼 파일을 수업 저장소에서도 고친 드문 경우입니다.
+  내 답을 그대로 두려면 안내에 나오는 `git checkout --ours <파일>` 을 실행하시면 되고,
+  아예 되돌리려면 `git merge --abort` 를 쓰시면 됩니다.
 
 ## 제출 파일 만들기 (eTL 등)
 

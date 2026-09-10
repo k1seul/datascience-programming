@@ -40,6 +40,11 @@ LANG_SUFFIX = {"c": ".c", "cpp": ".cpp", "python": ".py"}
 DIFFICULTIES = ["impl", "easy", "medium", "hard"]
 DIFFICULTY_LABEL = {"impl": "구현", "easy": "쉬움", "medium": "중간", "hard": "어려움"}
 DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
+
+# Where new weeks come from. A fork keeps this value, which is what lets `sync` wire up
+# the upstream remote for someone who only clicked "Fork" and never touched git remotes.
+UPSTREAM_URL = "https://github.com/k1seul/datascience-programming.git"
+UPSTREAM_BRANCH = "main"
 # Files that belong to the grader, never to a submission.
 SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py"}
 STATUS_ICON = {
@@ -503,6 +508,113 @@ def parse_task_spec(spec: str) -> tuple[str, str]:
     return language, name
 
 
+def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
+    proc = subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8"
+    )
+    if check and proc.returncode != 0:
+        message = (proc.stderr or proc.stdout).strip()
+        raise SystemExit(f"git {' '.join(args)} 가 실패했습니다:\n{message}")
+    return proc
+
+
+def canonical(url: str) -> str:
+    """Normalise a remote URL so ssh and https forms of the same repo compare equal."""
+    url = url.strip().removesuffix(".git")
+    url = re.sub(r"^git@([^:]+):", r"https://\1/", url)
+    return url.removeprefix("https://").removeprefix("http://").lower()
+
+
+def upstream_remote() -> str:
+    """Return the remote that new weeks come from, adding it when it is missing.
+
+    Someone who cloned the course repository already has it as `origin`. Someone who
+    forked has their own copy as `origin`, so a separate `upstream` remote is needed;
+    forgetting that is the usual reason new weeks never show up.
+    """
+    remotes = {
+        parts[0]: parts[1]
+        for line in git("remote", "-v").stdout.splitlines()
+        if "(fetch)" in line and (parts := line.split())
+    }
+    if "upstream" in remotes:
+        return "upstream"
+    if "origin" in remotes and canonical(remotes["origin"]) == canonical(UPSTREAM_URL):
+        return "origin"
+    git("remote", "add", "upstream", UPSTREAM_URL)
+    print(f"upstream 리모트를 추가했습니다: {UPSTREAM_URL}\n")
+    return "upstream"
+
+
+def week_names() -> set[str]:
+    return {week.name for week in weeks()}
+
+
+def cmd_sync(args: argparse.Namespace) -> int:
+    """Bring in newly published weeks without disturbing the answers already written."""
+    if not (ROOT / ".git").exists():
+        raise SystemExit("git 저장소가 아닙니다. clone 이나 fork 한 폴더에서 실행해 주세요.")
+
+    dirty = git("status", "--porcelain").stdout.strip()
+    if dirty and not args.check:
+        print(paint("아직 커밋하지 않은 변경이 있습니다:", YELLOW))
+        for line in dirty.splitlines()[:10]:
+            print(f"  {line}")
+        print("\n먼저 커밋하거나 잠시 치워 두고 다시 실행해 주세요.")
+        print('  git add -A && git commit -m "작업 중"')
+        print("  또는  git stash")
+        return 1
+
+    remote = upstream_remote()
+    branch = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    print(f"{remote}/{UPSTREAM_BRANCH} 를 가져와서 현재 브랜치({branch})에 합칩니다.")
+    git("fetch", remote, UPSTREAM_BRANCH)
+
+    incoming = git("log", "--oneline", f"HEAD..{remote}/{UPSTREAM_BRANCH}").stdout.strip()
+    if not incoming:
+        print(paint("이미 최신입니다.", GREEN))
+        return 0
+
+    lines = incoming.splitlines()
+    print(f"\n새로 올라온 커밋 {len(lines)}개:")
+    for line in lines[:10]:
+        print(f"  {line}")
+    if len(lines) > 10:
+        print(f"  ... 외 {len(lines) - 10}개")
+
+    if args.check:
+        print("\n(--check 라서 받아오지는 않았습니다. 그냥 `sync` 로 실행하면 반영됩니다.)")
+        return 0
+
+    before = week_names()
+    merge = git("merge", f"{remote}/{UPSTREAM_BRANCH}", "-m", "새로 올라온 주차 반영", check=False)
+    if merge.returncode != 0:
+        conflicts = git("diff", "--name-only", "--diff-filter=U").stdout.split()
+        print()
+        print(paint("충돌이 났습니다. 아래 파일을 정리해야 합니다:", RED))
+        for path in conflicts:
+            print(f"  {path}")
+        print("\n내가 쓴 답을 그대로 두려면:")
+        for path in conflicts:
+            print(f"  git checkout --ours {path}")
+        print("  git add -A && git commit")
+        print("\n되돌리려면:  git merge --abort")
+        return 1
+
+    added = sorted(week_names() - before)
+    print()
+    print(paint("반영했습니다.", GREEN))
+    if added:
+        print("\n새 주차:")
+        for name in added:
+            print(f"  {name}")
+        first = sorted(added)[0]
+        number = WEEK_RE.match(first).group(1).lstrip("0") or "0"
+        print(f"\n  uv run runner.py show {number} 로 문제를 볼 수 있습니다.")
+    print("\n  uv run runner.py list 로 현황을 확인해 보세요.")
+    return 0
+
+
 def cmd_new(args: argparse.Namespace) -> int:
     existing = weeks()
     number = args.week or (existing[-1].number + 1 if existing else 1)
@@ -595,6 +707,12 @@ def main() -> int:
     p_submit.add_argument("--with-problem", action="store_true", help="problem.md 도 함께 넣기")
     p_submit.add_argument("--no-check", action="store_true", help="압축 전에 채점하지 않기")
     p_submit.set_defaults(func=cmd_submit)
+
+    p_sync = sub.add_parser("sync", help="새로 올라온 주차 받아오기")
+    p_sync.add_argument(
+        "--check", action="store_true", help="받아오지 않고 무엇이 올라왔는지만 확인"
+    )
+    p_sync.set_defaults(func=cmd_sync)
 
     p_new = sub.add_parser("new", help="새 주차 뼈대 생성")
     p_new.add_argument("--topic", required=True, help="이번 주 토픽 (예: 이진 탐색 트리)")
