@@ -20,14 +20,14 @@ class Node:
 
 def from_iterable(values: Iterable[int]) -> Node | None:
     """Return the head of a list linking the values in order, or None when empty."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError
 
 
 def to_list(head: Node | None) -> list[int]:
     """Flatten a linked list into a Python list."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError
 
 
 def reverse(head: Node | None) -> Node | None:
     """Relink the nodes in reverse and return the new head. Do not allocate new nodes."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError
