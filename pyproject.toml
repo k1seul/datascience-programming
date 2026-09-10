@@ -1,7 +1,7 @@
 [project]
-name = "weekly-coding-exercises"
+name = "datascience-programming"
 version = "0.1.0"
-description = "매주 하나의 문제를 Python / C / C++ 세 언어로 풀고 pytest로 채점하는 연습장"
+description = "데이터사이언스를 위한 프로그래밍 실습 — 매주 C / C++ / Python 으로 풀고 pytest 로 채점한다"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []

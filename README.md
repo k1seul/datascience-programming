@@ -1,4 +1,8 @@
-# Weekly Coding Exercises
+# Data Science Programming — Fall Coding Exercises
+
+**Seoul National University** · 데이터사이언스를 위한 프로그래밍 실습
+
+[![tests](https://github.com/k1seul/datascience-programming/actions/workflows/tests.yml/badge.svg)](https://github.com/k1seul/datascience-programming/actions/workflows/tests.yml)
 
 매주 토픽 하나를 정하고, **C / C++ / Python** 세 언어로 문제를 푼다.
 언어가 무엇이든 채점은 **전부 pytest** 로 돌아간다 — C 와 C++ 소스는 테스트가 직접
@@ -109,12 +113,8 @@ def detect_cycle(head: Node | None) -> Node | None:
 uv run runner.py ci        # 종료 코드: 실패나 중단이 하나라도 있으면 1
 ```
 
-린트(`ruff check`, `ruff format --check`)도 같이 돈다. README 위에 배지를 달려면
-저장소를 올린 뒤 아래 줄에서 `<OWNER>/<REPO>` 만 바꿔 넣으면 된다.
-
-```markdown
-![tests](https://github.com/<OWNER>/<REPO>/actions/workflows/tests.yml/badge.svg)
-```
+린트(`ruff check`, `ruff format --check`)도 같이 돈다. 맨 위 배지가 그 결과다 —
+포크해서 쓴다면 배지 주소의 `k1seul/datascience-programming` 을 자기 저장소로 바꾸면 된다.
 
 ## 제출 파일 만들기 (eTL 등)
 
