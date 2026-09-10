@@ -1,20 +1,25 @@
 # Week {{week}} — {{topic}}
 
-(이번 주에 무엇을 왜 하는지 두세 줄)
+(이번 주에 무엇을 왜 하는지 두세 줄로 적어 주세요)
 
 | 과제 | 언어 | 난이도 | 내용 |
 |---|---|---|---|
 {{rows}}
 
-## 채점
+## 채점하기
 
 ```sh
-uv run runner.py test {{week_num}}                  # 전부
-uv run runner.py test {{week_num}} --lang c         # 언어별
-uv run runner.py test {{week_num}} --task <문제이름>  # 과제 하나
+uv run runner.py test {{week_num}}                  # 전부 채점합니다
+uv run runner.py test {{week_num}} --lang c         # 언어별로 골라서
+uv run runner.py test {{week_num}} --task <문제이름>  # 한 과제만
 ```
 
-## 이번 주에 붙잡을 감각
+## 추천 읽을거리
+
+- (전체를 훑어 주는 글 하나)
+- (시각화 자료나 공식 문서)
+
+## 이번 주에 익혀 두면 좋은 것
 
 - (핵심 개념 1)
 - (핵심 개념 2)

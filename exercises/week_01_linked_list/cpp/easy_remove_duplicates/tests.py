@@ -1,4 +1,4 @@
-"""Week 01 / C++ (쉬움) 채점 테스트."""
+"""Grading tests for Week 01 / C++ (easy)."""
 
 from __future__ import annotations
 
@@ -43,28 +43,28 @@ def reference(values: list[int]) -> list[int]:
         ([-5, -5, 0, 0, 0, 7], [-5, 0, 7]),
     ],
 )
-def test_기본_케이스(dedup, values, expected):
+def test_basic_cases(dedup, values, expected):
     assert dedup(values) == expected
 
 
-def test_중복이_맨_끝에_몰려도_처리한다(dedup):
+def test_duplicates_at_the_end(dedup):
     assert dedup([1, 2, 3, 3, 3, 3]) == [1, 2, 3]
 
 
-def test_중복이_맨_앞에_몰려도_처리한다(dedup):
+def test_duplicates_at_the_front(dedup):
     assert dedup([9, 9, 9, 9, 10]) == [9, 10]
 
 
-def test_용량이_모자라면_오류를_반환한다(dedup):
+def test_reports_error_when_capacity_is_too_small(dedup):
     with pytest.raises(ValueError):
         dedup([1, 1, 2, 3], capacity=2)
 
 
-def test_결과_길이와_딱_맞는_용량은_통과한다(dedup):
+def test_exact_capacity_is_enough(dedup):
     assert dedup([1, 1, 2, 3], capacity=3) == [1, 2, 3]
 
 
-def test_무작위_입력이_참조_구현과_같다(dedup):
+def test_matches_reference_on_random_input(dedup):
     rng = random.Random(1)
     for _ in range(50):
         values = sorted(rng.choices(range(-10, 10), k=rng.randint(0, 40)))

@@ -1,6 +1,6 @@
 name: submit
 
-# Actions 탭에서 주차를 골라 돌리면 제출용 zip 이 아티팩트로 나온다.
+# Pick a week from the Actions tab and the submission zip comes back as an artifact.
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +9,7 @@ on:
         required: true
         default: "1"
       name:
-        description: "파일 이름 뒤에 붙일 이름/학번 (선택)"
+        description: "파일 이름 뒤에 붙일 이름이나 학번 (선택)"
         required: false
         default: ""
       with_problem:
@@ -22,20 +22,20 @@ permissions:
 
 jobs:
   zip:
-    name: 제출 파일 만들기
+    name: build submission zip
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: uv 설치
+      - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
 
-      - name: 의존성 설치
+      - name: Install dependencies
         run: uv sync --locked
 
-      - name: zip 생성
+      - name: Build zip
         env:
           WEEK: ${{ inputs.week }}
           STUDENT: ${{ inputs.name }}

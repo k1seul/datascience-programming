@@ -1,6 +1,6 @@
 name: tests
 
-# 누가 올리든(포크·PR 포함) 자동으로 채점한다.
+# Runs for anyone who pushes, including forks and pull requests.
 on:
   push:
     branches: ["**"]
@@ -16,41 +16,42 @@ concurrency:
 
 jobs:
   grade:
-    name: 채점
+    name: grade
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: uv 설치
+      - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
 
-      - name: 컴파일러 확인
+      - name: Check compilers
         run: |
           cc --version | head -1
           c++ --version | head -1
 
-      - name: 의존성 설치
+      - name: Install dependencies
         run: uv sync --locked
 
-      # 아직 TODO 가 남은 과제는 실패로 치지 않는다. 손댔는데 틀렸거나
-      # 무한 루프로 멈춘 과제만 빨간불이 된다. 결과 표는 실행 요약에 붙는다.
-      - name: 채점
+      # Tasks that still carry a TODO are not failures. Only a task someone worked on
+      # that breaks, or one that hangs, turns the run red. The per-task table is
+      # written to the run summary page.
+      - name: Grade
         run: uv run runner.py ci
 
   lint:
-    name: 린트
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: uv 설치
+      - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
 
-      - name: 의존성 설치
+      - name: Install dependencies
         run: uv sync --locked
 
       - run: uv run ruff check .

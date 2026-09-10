@@ -1,4 +1,4 @@
-"""Week {{week}} / Python ({{difficulty_label}}) 채점 테스트."""
+"""Grading tests for Week {{week}} / Python ({{difficulty}})."""
 
 from __future__ import annotations
 
@@ -8,5 +8,5 @@ from . import solution
 
 
 @pytest.mark.parametrize(("given", "expected"), [])
-def test_기본_케이스(given, expected):
+def test_basic_cases(given, expected):
     assert solution.solve(given) == expected

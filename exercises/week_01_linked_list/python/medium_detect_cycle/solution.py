@@ -1,10 +1,10 @@
-"""문제 설명: problem.md"""
+"""Problem statement: problem.md"""
 
 from __future__ import annotations
 
 
 class Node:
-    """주어진 노드 타입 — 고치지 않는다."""
+    """Given node type - do not modify."""
 
     __slots__ = ("value", "next")
 
@@ -13,15 +13,15 @@ class Node:
         self.next = next
 
     def __repr__(self) -> str:
-        # 사이클이 있어도 안전하도록 next 는 찍지 않는다.
+        # Never print next, so that a cyclic list stays safe to repr.
         return f"Node({self.value})"
 
 
 def detect_cycle(head: Node | None) -> Node | None:
-    """사이클이 시작되는 노드. 없으면 None."""
+    """Return the node where the cycle starts, or None when there is no cycle."""
     raise NotImplementedError  # TODO
 
 
 def cycle_length(head: Node | None) -> int:
-    """사이클에 속한 노드 개수. 없으면 0."""
+    """Return the number of nodes in the cycle, or 0 when there is no cycle."""
     raise NotImplementedError  # TODO

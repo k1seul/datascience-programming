@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""주간 코딩 연습 러너.
+"""Command line runner for the weekly exercises.
 
-    uv run runner.py list                        # 주차/과제 현황
-    uv run runner.py show 1 detect_cycle         # 문제 설명 출력
-    uv run runner.py test 1 --lang c             # 채점
+    uv run runner.py list                        # status of every week and task
+    uv run runner.py show 1 detect_cycle         # print a problem statement
+    uv run runner.py test 1 --lang c             # grade
     uv run runner.py new --topic "이진 탐색 트리" --slug binary_search_tree
 
-채점은 전부 pytest 로 돌아간다. 이 스크립트는 pytest 를 부르는 껍데기일 뿐이라,
-`uv run pytest exercises/week_01_linked_list -m cpp` 처럼 직접 불러도 똑같이 동작한다.
+All grading goes through pytest. This script is only a thin wrapper around it, so
+`uv run pytest exercises/week_01_linked_list -m cpp` does exactly the same thing.
+
+User facing output stays in Korean because the course material is in Korean; the code
+itself (identifiers, comments, docstrings) is in English.
 """
 
 from __future__ import annotations
@@ -37,7 +40,7 @@ LANG_SUFFIX = {"c": ".c", "cpp": ".cpp", "python": ".py"}
 DIFFICULTIES = ["impl", "easy", "medium", "hard"]
 DIFFICULTY_LABEL = {"impl": "구현", "easy": "쉬움", "medium": "중간", "hard": "어려움"}
 DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
-# 제출 압축에서 빼는 파일 — 채점기가 들고 있는 것들.
+# Files that belong to the grader, never to a submission.
 SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py"}
 STATUS_ICON = {
     "pass": "✅",
@@ -65,7 +68,7 @@ def paint(text: str, code: str) -> str:
 
 
 def display_width(text: str) -> int:
-    """한글처럼 두 칸을 차지하는 글자를 감안한 폭."""
+    """Width in terminal columns, counting wide characters (Hangul, CJK) as two."""
     return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in text)
 
 
@@ -75,7 +78,7 @@ def pad(text: str, width: int) -> str:
 
 @dataclass(frozen=True)
 class Task:
-    """`<주차>/<언어>/<난이도>_<문제이름>/` 하나."""
+    """One `<week>/<language>/<difficulty>_<name>/` directory."""
 
     path: Path
 
@@ -93,7 +96,7 @@ class Task:
 
     @property
     def slug(self) -> str:
-        """난이도 접두어를 뗀 문제 이름."""
+        """Problem name with the difficulty prefix stripped."""
         return self.name.partition("_")[2] or self.name
 
     @property
@@ -110,7 +113,7 @@ class Task:
         return [p for p in sorted(self.path.glob(f"*{suffix}")) if p.name != "tests.py"]
 
     def untouched(self) -> bool:
-        """제출 파일에 TODO 가 그대로 남아 있으면 미착수로 본다."""
+        """A submission still carrying a TODO counts as not started."""
         return any("TODO" in src.read_text(encoding="utf-8") for src in self.sources)
 
     def matches(self, token: str) -> bool:
@@ -142,7 +145,7 @@ class Week:
 
     @property
     def topic(self) -> str:
-        """주차 README 의 제목에서 '— ' 뒤쪽을 토픽으로 읽는다."""
+        """Read the topic from the part after the dash in the week README title."""
         readme = self.path / "README.md"
         if not readme.exists():
             return self.slug.replace("_", " ")
@@ -170,7 +173,7 @@ def weeks() -> list[Week]:
 
 
 def resolve_week(token: str) -> Week:
-    """'1', '01', 'week_01', 'week_01_linked_list', 'linked_list' 을 모두 받아들인다."""
+    """Accept '1', '01', 'week_01', 'week_01_linked_list' and 'linked_list' alike."""
     token = token.strip().strip("/")
     found = weeks()
     for week in found:
@@ -192,7 +195,7 @@ def resolve_task(week: Week, token: str) -> Task:
     raise SystemExit(f"'{token}' 이 여러 과제와 겹칩니다: {', '.join(t.ref for t in matched)}")
 
 
-# 테스트별 타임아웃(pytest-timeout)이 먼저 걸리지만, 그마저 안 먹을 때를 위한 뒷문.
+# pytest-timeout fires first per test; this is the backstop for when even that hangs.
 GRADE_TIMEOUT = 300
 
 
@@ -221,7 +224,7 @@ def read_junit(report: Path) -> dict[str, int]:
 
 @dataclass(frozen=True)
 class Result:
-    """과제 하나의 채점 결과."""
+    """Grading result for a single task."""
 
     tests: int
     failures: int
@@ -240,10 +243,10 @@ class Result:
 
     @property
     def status(self) -> str:
-        """crash(중단) / empty(테스트 없음) / skipped / pass / pending(미착수) / fail."""
+        """One of crash / empty / skipped / pass / pending / fail."""
         if self.returncode == 5:
             return "empty"
-        # 타임아웃(무한 루프)이나 세그폴트면 pytest 가 리포트를 남기지 못하고 죽는다.
+        # On a timeout (infinite loop) or a segfault pytest dies before writing a report.
         if self.returncode not in (0, 1) or (self.tests == 0 and self.returncode != 0):
             return "crash"
         if self.tests == 0:
@@ -254,9 +257,9 @@ class Result:
 
 
 def grade(task: Task) -> Result:
-    """과제 하나를 조용히 채점한다.
+    """Grade a single task quietly.
 
-    pytest 의 요약 문구를 파싱하는 대신 junit-xml 리포트에서 정확한 수를 읽는다.
+    Reads exact counts from a junit-xml report instead of parsing pytest's summary line.
     """
     with tempfile.TemporaryDirectory() as tmp:
         report = Path(tmp) / "report.xml"
@@ -293,7 +296,7 @@ def cmd_list(args: argparse.Namespace) -> int:
         print(paint(f"{week.name} — {week.topic}", BOLD))
         tasks = week.tasks()
         if not tasks:
-            print("  (과제 없음)")
+            print(f"  (읽기 주차 — uv run runner.py show {week.number} 로 자료 목록)")
             continue
         for language in LANGUAGES:
             in_language = [t for t in tasks if t.language == language]
@@ -345,10 +348,10 @@ def cmd_test(args: argparse.Namespace) -> int:
 
 
 def cmd_ci(args: argparse.Namespace) -> int:
-    """CI 용 채점. 손댄 과제가 틀렸을 때만 실패로 끝낸다.
+    """Grade for CI, failing only when a task someone worked on is broken.
 
-    아직 TODO 가 남은 과제(미착수)는 실패가 아니다 — 안 푼 문제 때문에 CI 가
-    항상 빨간불이면 신호로서 쓸모가 없다.
+    A task still carrying a TODO is not a failure: a CI that is always red because of
+    unsolved exercises carries no signal.
     """
     targets = [resolve_week(args.week)] if args.week else weeks()
     if not targets:
@@ -379,7 +382,7 @@ def cmd_ci(args: argparse.Namespace) -> int:
 
 
 def write_github_summary(rows: list[tuple[Week, Task, Result]], tally: dict[str, int]) -> None:
-    """GitHub Actions 실행 요약 페이지에 표를 붙인다 (CI 밖에서는 아무 일도 안 한다)."""
+    """Append a table to the GitHub Actions run summary (a no-op outside CI)."""
     target = os.environ.get("GITHUB_STEP_SUMMARY")
     if not target:
         return
@@ -405,7 +408,7 @@ def write_github_summary(rows: list[tuple[Week, Task, Result]], tally: dict[str,
 
 
 def cmd_submit(args: argparse.Namespace) -> int:
-    """제출용 zip 을 만든다 — 내가 쓴 코드만, 채점 테스트는 빼고."""
+    """Build the submission zip: the submitted code only, without the grading tests."""
     week = resolve_week(args.week)
     tasks = [resolve_task(week, args.task)] if args.task else week.tasks()
     if not tasks:
@@ -461,7 +464,7 @@ def slugify(text: str) -> str:
 
 
 def parse_task_spec(spec: str) -> tuple[str, str]:
-    """'cpp/medium_validate_bst' 또는 'cpp/medium' 을 (언어, 디렉터리 이름) 으로."""
+    """Turn 'cpp/medium_validate_bst' or 'cpp/medium' into (language, directory name)."""
     language, _, name = spec.strip().strip("/").partition("/")
     if language not in LANGUAGES:
         raise SystemExit(f"언어는 {', '.join(LANGUAGES)} 중 하나여야 합니다: {spec}")

@@ -18,22 +18,22 @@ python_files = ["tests.py", "test_*.py"]
 testpaths = ["exercises"]
 norecursedirs = ["templates", "build", ".venv", ".git"]
 addopts = "-q --strict-markers"
-# 포인터를 잘못 이으면 무한 루프가 나기 쉽다. thread 방식이라 C 안에서 도는 루프도 잡는다.
+# Mis-linked pointers hang easily. The thread method also catches loops inside C.
 timeout = 20
 timeout_method = "thread"
 markers = [
-    "python: Python 과제",
-    "c: C 과제",
-    "cpp: C++ 과제",
-    "impl: 자료구조를 직접 구현하는 과제",
-    "easy: 쉬움",
-    "medium: 중간",
-    "hard: 어려움",
+    "python: Python task",
+    "c: C task",
+    "cpp: C++ task",
+    "impl: build the data structure itself",
+    "easy: easy",
+    "medium: medium",
+    "hard: hard",
 ]
 
 [tool.ruff]
 line-length = 100
-# 문제 설명(.md) 안의 코드 블록은 정렬을 의도한 것이라 포매터가 건드리지 않게 한다.
+# Code blocks inside problem statements are aligned on purpose; keep the formatter out.
 exclude = ["templates", "build", "*.md"]
 
 [tool.ruff.lint]

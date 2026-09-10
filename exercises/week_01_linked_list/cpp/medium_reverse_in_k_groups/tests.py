@@ -1,4 +1,4 @@
-"""Week 01 / C++ (중간) 채점 테스트."""
+"""Grading tests for Week 01 / C++ (medium)."""
 
 from __future__ import annotations
 
@@ -44,26 +44,26 @@ def reference(values: list[int], k: int) -> list[int]:
         ([1, 2, 3, 4], 2, [2, 1, 4, 3]),
     ],
 )
-def test_기본_케이스(reverse_groups, values, k, expected):
+def test_basic_cases(reverse_groups, values, k, expected):
     assert reverse_groups(values, k) == expected
 
 
 @pytest.mark.parametrize("k", [0, -1, -7])
-def test_k가_1보다_작으면_오류다(reverse_groups, k):
+def test_k_below_one_is_an_error(reverse_groups, k):
     with pytest.raises(ValueError):
         reverse_groups([1, 2, 3], k)
 
 
-def test_용량이_모자라면_오류를_반환한다(reverse_groups):
+def test_reports_error_when_capacity_is_too_small(reverse_groups):
     with pytest.raises(ValueError):
         reverse_groups([1, 2, 3, 4], 2, capacity=3)
 
 
-def test_용량이_딱_맞으면_통과한다(reverse_groups):
+def test_exact_capacity_is_enough(reverse_groups):
     assert reverse_groups([1, 2, 3, 4], 2, capacity=4) == [2, 1, 4, 3]
 
 
-def test_무작위_입력이_참조_구현과_같다(reverse_groups):
+def test_matches_reference_on_random_input(reverse_groups):
     rng = random.Random(7)
     for _ in range(60):
         n = rng.randint(0, 30)

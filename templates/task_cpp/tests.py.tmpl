@@ -1,4 +1,4 @@
-"""Week {{week}} / C++ ({{difficulty_label}}) 채점 테스트."""
+"""Grading tests for Week {{week}} / C++ ({{difficulty}})."""
 
 from __future__ import annotations
 
@@ -23,5 +23,5 @@ def solve():
 
 
 @pytest.mark.parametrize(("given", "expected"), [])
-def test_기본_케이스(solve, given, expected):
+def test_basic_cases(solve, given, expected):
     assert solve(given) == expected

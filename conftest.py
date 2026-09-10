@@ -1,4 +1,4 @@
-"""리포지터리 루트를 import 경로에 올려 각 주차 테스트가 harness를 쓸 수 있게 한다."""
+"""Put the repository root on sys.path so every task's tests can import `harness`."""
 
 import sys
 from pathlib import Path

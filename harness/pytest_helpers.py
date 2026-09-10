@@ -1,4 +1,4 @@
-"""pytest 안에서 네이티브 구현을 다룰 때 쓰는 어댑터."""
+"""Adapters for calling native implementations from inside pytest."""
 
 from __future__ import annotations
 
@@ -12,18 +12,19 @@ from harness.native import BuildFailed, CompilerMissing, load
 
 
 def native_lib(src: Path) -> ctypes.CDLL:
-    """소스를 빌드해 로드한다.
+    """Build and load a source.
 
-    컴파일러가 없으면 skip, 제출한 코드가 컴파일되지 않으면 컴파일러 출력과 함께 fail.
+    Skips the test when no compiler is available, and fails it with the compiler
+    output when the submitted code does not compile.
     """
     try:
         return load(src)
     except CompilerMissing as exc:
         pytest.skip(str(exc))
     except FileNotFoundError:
-        pytest.skip(f"{src.name} 가 아직 없습니다")
+        pytest.skip(f"{src.name} does not exist yet")
     except BuildFailed as exc:
-        pytest.fail(f"{src.name} 컴파일 실패:\n{exc}", pytrace=False)
+        pytest.fail(f"{src.name} failed to compile:\n{exc}", pytrace=False)
 
 
 def list_out_call(
@@ -31,10 +32,11 @@ def list_out_call(
     *args: Sequence[int] | int,
     capacity: int | None = None,
 ) -> list[int]:
-    """`int f(... , int *out, int out_capacity)` 규약을 파이썬 호출로 감싼다.
+    """Wrap the `int f(..., int *out, int out_capacity)` convention as a Python call.
 
-    args 의 정수는 스칼라 인자로, 정수 시퀀스는 `(const int *ptr, int len)` 두 인자로 펼쳐진다.
-    반환값이 음수면 오류 신호로 보고 ValueError 를 올리고, 0 이상이면 out 에 쓰인 개수로 본다.
+    Integers in `args` are passed as scalars; integer sequences expand into a
+    `(const int *ptr, int len)` pair. A negative return value is treated as an error
+    signal and raises ValueError; otherwise it is the number of items written to out.
 
         list_out_call(lib.reverse_groups, [1, 2, 3, 4], 2)
         # -> int reverse_groups(const int *values, int n, int k, int *out, int cap)
@@ -62,7 +64,7 @@ def list_out_call(
     written = fn(*values, out, cap)
 
     if written < 0:
-        raise ValueError(f"네이티브 구현이 오류 코드 {written} 을 반환했습니다")
+        raise ValueError(f"the native implementation returned error code {written}")
     if written > cap:
-        raise AssertionError(f"버퍼 용량({cap})보다 큰 길이 {written} 를 반환했습니다")
+        raise AssertionError(f"returned length {written} exceeds the buffer capacity {cap}")
     return list(out[:written])

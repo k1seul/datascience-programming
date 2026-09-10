@@ -1,8 +1,8 @@
-// 문제 설명: problem.md
+// Problem statement: problem.md
 //
-// 채점기가 ctypes 로 부르기 때문에 심볼은 extern "C" 로 노출한다.
+// The grader calls this through ctypes, so the symbol must be exposed as extern "C".
 
-// (한 줄 명세) 반환: out 에 쓴 개수, 오류면 -1.
+// (one-line specification) Returns the number of items written to out, or -1 on error.
 extern "C" int solve(const int *values, int n, int *out, int out_capacity)
 {
     return -1;  // TODO

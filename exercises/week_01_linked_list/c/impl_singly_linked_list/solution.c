@@ -1,4 +1,4 @@
-/* 문제 설명: problem.md / 함수 규약: list.h */
+/* Problem statement: problem.md / function contract: list.h */
 
 #include <stdlib.h>
 
@@ -11,7 +11,7 @@ typedef struct Node {
 
 struct List {
     Node *head;
-    /* TODO: tail, size 같은 필드를 더해도 된다 */
+    /* TODO: feel free to add fields such as tail or size */
 };
 
 List *list_create(void)

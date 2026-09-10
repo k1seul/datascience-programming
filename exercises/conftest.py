@@ -1,10 +1,11 @@
-"""디렉터리 구조에서 pytest 마커를 자동으로 붙인다.
+"""Derive pytest markers from the directory layout.
 
     exercises/week_01_linked_list/cpp/medium_reverse_in_k_groups/tests.py
                                   ^^^  ^^^^^^
-                                  언어  난이도   ->  @pytest.mark.cpp @pytest.mark.medium
+                              language  difficulty  ->  @pytest.mark.cpp @pytest.mark.medium
 
-덕분에 `pytest -m c`, `pytest -m "cpp and easy"` 같은 필터가 그대로 먹는다.
+This is what makes `pytest -m c` and `pytest -m "cpp and easy"` work without any
+per-file boilerplate.
 """
 
 from pathlib import Path
