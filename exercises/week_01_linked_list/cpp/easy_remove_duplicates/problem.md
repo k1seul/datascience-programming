@@ -26,6 +26,8 @@ extern "C" int dedup_sorted(const int *values, int n, int *out, int out_capacity
   이어 붙여 리스트를 만든 뒤 **링크를 끊는 방식**으로 지워 주세요.
   이번 주 토픽이 포인터 조작이기 때문입니다.
 - 만든 노드는 반환하기 전에 모두 `delete` 로 해제해 주세요.
+- 스텁의 `#define NOT_IMPLEMENTED` 와 `return NOT_IMPLEMENTED;` 는 구현을 시작할 때 지워 주세요.
+  채점기가 이 값을 "아직 풀지 않음" 표시로 읽습니다.
 - 한 번만 순회하면 끝낼 수 있습니다.
 
 ## 채점

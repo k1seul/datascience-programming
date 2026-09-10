@@ -10,6 +10,11 @@ import pytest
 
 from harness.native import BuildFailed, CompilerMissing, load
 
+# Untouched C / C++ stubs return this instead of a plausible error code, so the grader
+# can tell "not written yet" apart from "written and wrong". Keep it in sync with the
+# NOT_IMPLEMENTED define in the stub files.
+NOT_IMPLEMENTED = -1000
+
 
 def native_lib(src: Path) -> ctypes.CDLL:
     """Build and load a source.
@@ -63,6 +68,8 @@ def list_out_call(
     fn.restype = ctypes.c_int
     written = fn(*values, out, cap)
 
+    if written == NOT_IMPLEMENTED:
+        raise NotImplementedError("the stub is still returning NOT_IMPLEMENTED")
     if written < 0:
         raise ValueError(f"the native implementation returned error code {written}")
     if written > cap:

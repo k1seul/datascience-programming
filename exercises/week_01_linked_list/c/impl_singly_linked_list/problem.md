@@ -9,6 +9,8 @@
   다만 `list_size` 는 원소 개수를, `list_index_of` 는 위치(없으면 `-1`)를,
   `list_to_array` 는 복사한 개수(용량이 부족하면 `-1`)를 반환합니다.
 - `list_destroy(NULL)` 은 아무 일도 하지 않고 그냥 넘어가야 합니다.
+- 스텁의 `NOT_IMPLEMENTED` 와 `list_create` 의 `return NULL` 은 "아직 풀지 않음" 표시입니다.
+  구현을 시작하면 자연스럽게 사라집니다.
 - 인덱스는 0부터 셉니다. `list_insert` 만 `index == size` (맨 뒤에 붙이기)를 허용합니다.
 - `list_size` 는 매번 세어도 되고 필드로 들고 있어도 됩니다.
   어느 쪽이든 모든 연산이 끝난 뒤에 값이 맞기만 하면 됩니다.

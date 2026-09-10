@@ -19,9 +19,9 @@ class Node:
 
 def detect_cycle(head: Node | None) -> Node | None:
     """Return the node where the cycle starts, or None when there is no cycle."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError
 
 
 def cycle_length(head: Node | None) -> int:
     """Return the number of nodes in the cycle, or 0 when there is no cycle."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError

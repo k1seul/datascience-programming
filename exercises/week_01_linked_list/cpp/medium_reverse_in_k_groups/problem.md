@@ -25,6 +25,8 @@ extern "C" int reverse_groups(const int *values, int n, int k, int *out, int out
 
 - 값을 배열에 담아 구간을 뒤집는 식으로 풀지 마시고, 노드의 링크를 실제로 다시 이어 주세요.
 - 만든 노드는 반환하기 전에 모두 해제해 주세요.
+- 스텁의 `#define NOT_IMPLEMENTED` 와 `return NOT_IMPLEMENTED;` 는 구현을 시작할 때 지워 주세요.
+  채점기가 이 값을 "아직 풀지 않음" 표시로 읽습니다.
 - 묶음을 뒤집기 **전에** 뒤에 k개가 남아 있는지 먼저 확인해야 합니다.
   뒤집고 나서 되돌리려고 하면 훨씬 번거로워집니다.
 

@@ -112,9 +112,17 @@ class Task:
         suffix = LANG_SUFFIX.get(self.language, "")
         return [p for p in sorted(self.path.glob(f"*{suffix}")) if p.name != "tests.py"]
 
-    def untouched(self) -> bool:
-        """A submission still carrying a TODO counts as not started."""
-        return any("TODO" in src.read_text(encoding="utf-8") for src in self.sources)
+    def looks_unwritten(self) -> bool:
+        """Cheap guess used by `list --fast`, which does not run the tests.
+
+        The real verdict comes from grading: see read_junit. This only reads the source
+        for the stub markers, so it cannot tell a half-finished task from an untouched one.
+        """
+        markers = ("NotImplementedError", "NOT_IMPLEMENTED")
+        return any(
+            any(marker in src.read_text(encoding="utf-8") for marker in markers)
+            for src in self.sources
+        )
 
     def matches(self, token: str) -> bool:
         token = token.strip("/")
@@ -211,15 +219,34 @@ def run_pytest(
         return subprocess.CompletedProcess(cmd, returncode=124, stdout="", stderr="timeout")
 
 
-def read_junit(report: Path) -> dict[str, int]:
+# A stub signals "not written yet" by raising this; the marker is the behaviour itself,
+# so it cannot survive a real implementation the way a leftover comment could.
+NOT_IMPLEMENTED_MARK = "NotImplementedError"
+
+
+def read_junit(report: Path) -> tuple[dict[str, int], bool]:
+    """Return (counts, every failure is a NotImplementedError).
+
+    The second value is what separates "not started" from "started and broken": a task
+    whose only failures are NotImplementedError has simply not been written yet, while a
+    single assertion failure among them means someone worked on it and broke something.
+    """
     empty = dict.fromkeys(["tests", "failures", "errors", "skipped"], 0)
     if not report.exists():
-        return empty
+        return empty, False
     root = ET.parse(report).getroot()
     suite = root.find("testsuite") if root.tag == "testsuites" else root
     if suite is None:
-        return empty
-    return {key: int(suite.get(key, 0)) for key in empty}
+        return empty, False
+
+    counts = {key: int(suite.get(key, 0)) for key in empty}
+    problems = [
+        node for case in suite.iter("testcase") for node in case if node.tag in ("failure", "error")
+    ]
+    only_stubs = bool(problems) and all(
+        NOT_IMPLEMENTED_MARK in (node.get("message", "") + (node.text or "")) for node in problems
+    )
+    return counts, only_stubs
 
 
 @dataclass(frozen=True)
@@ -231,7 +258,7 @@ class Result:
     errors: int
     skipped: int
     returncode: int
-    untouched: bool
+    not_implemented: bool
 
     @property
     def bad(self) -> int:
@@ -253,7 +280,7 @@ class Result:
             return "empty"
         if self.bad == 0:
             return "skipped" if self.skipped and self.passed == 0 else "pass"
-        return "pending" if self.untouched else "fail"
+        return "pending" if self.not_implemented else "fail"
 
 
 def grade(task: Task) -> Result:
@@ -268,8 +295,8 @@ def grade(task: Task) -> Result:
             ["-q", "--tb=no", "-p", "no:cacheprovider", "--junit-xml", str(report)],
             quiet=True,
         )
-        counts = read_junit(report)
-    return Result(**counts, returncode=proc.returncode, untouched=task.untouched())
+        counts, only_stubs = read_junit(report)
+    return Result(**counts, returncode=proc.returncode, not_implemented=only_stubs)
 
 
 def format_result(result: Result) -> str:
@@ -305,7 +332,8 @@ def cmd_list(args: argparse.Namespace) -> int:
             print(f"  {paint(LANG_LABEL[language], DIM)}")
             for task in in_language:
                 if args.fast:
-                    status = paint("미착수", YELLOW) if task.untouched() else paint("작성됨", DIM)
+                    unwritten = task.looks_unwritten()
+                    status = paint("미착수", YELLOW) if unwritten else paint("작성됨", DIM)
                 else:
                     status = format_result(grade(task))
                 print(f"    {pad(task.name, 30)} {pad(task.difficulty_label, 6)} {status}")
@@ -402,7 +430,7 @@ def write_github_summary(rows: list[tuple[Week, Task, Result]], tally: dict[str,
             f"| {LANG_LABEL.get(task.language, task.language)} | {task.difficulty_label} "
             f"| {STATUS_LABEL[result.status]} {counts} |"
         )
-    lines += ["", "⬜ 는 아직 `TODO` 가 남은 과제라 실패로 치지 않습니다."]
+    lines += ["", "⬜ 는 아직 구현하지 않은 과제라 실패로 치지 않습니다."]
     with open(target, "a", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
 
@@ -420,9 +448,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
             print(f"  {pad(task.ref, 42)} {format_result(grade(task))}")
         print()
 
-    pending = [t for t in tasks if t.untouched()]
+    pending = [t for t in tasks if t.looks_unwritten()]
     if pending:
-        print(paint(f"주의: 아직 TODO 가 남은 과제 {len(pending)}개가 들어갑니다", YELLOW))
+        print(paint(f"주의: 아직 구현하지 않은 과제 {len(pending)}개가 들어갑니다", YELLOW))
         for task in pending:
             print(f"  - {task.ref}")
         print()

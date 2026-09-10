@@ -139,10 +139,27 @@ class Node:               # 주어진 노드 타입입니다. 수정하지 마�
 
 def detect_cycle(head: Node | None) -> Node | None:
     """사이클이 시작되는 노드를 반환합니다. 없으면 None 입니다."""
-    raise NotImplementedError  # TODO
+    raise NotImplementedError
 ```
 
-`TODO` 가 남아 있으면 `list` 명령이 그 과제를 **미착수**로 표시합니다.
+이 `raise NotImplementedError` 가 **아직 풀지 않았다는 표시**입니다.
+채점기는 실패한 테스트가 전부 `NotImplementedError` 이면 그 과제를 **미착수**로 봅니다.
+구현을 하면 이 줄이 자연스럽게 사라지기 때문에, 지우는 걸 잊어서 생기는 오판이 없습니다.
+
+C 와 C++ 는 예외를 던질 수 없으니 같은 역할을 하는 값을 씁니다.
+
+```c
+#define NOT_IMPLEMENTED (-1000)     // 구현을 시작하면 이 줄과 아래 return 을 지웁니다
+
+extern "C" int dedup_sorted(const int *values, int n, int *out, int out_capacity)
+{
+    return NOT_IMPLEMENTED;
+}
+```
+
+`-1000` 이 돌아오면 채점기가 `NotImplementedError` 로 바꿔 처리합니다.
+C 구현 과제에서는 `list_create()` 가 `NULL` 을 돌려주는 것이 같은 뜻입니다.
+
 자세한 설명과 제약 조건, 예시는 모두 옆에 있는 `problem.md` 에 적어 두었습니다.
 
 ## 명령 정리
@@ -189,7 +206,7 @@ def detect_cycle(head: Node | None) -> Node | None:
 | | 언제 | CI |
 |---|---|---|
 | ✅ 통과 | 테스트를 모두 통과했을 때 | 초록 |
-| ⬜ 미착수 | `TODO` 가 그대로 남아 있을 때 | 초록 (아직 풀지 않았을 뿐이니까요) |
+| ⬜ 미착수 | 실패한 테스트가 전부 `NotImplementedError` 일 때 | 초록 (아직 풀지 않았을 뿐이니까요) |
 | ❌ 실패 | 답을 썼는데 테스트가 깨질 때 | **빨강** |
 | 💥 중단됨 | 무한 루프나 세그폴트로 멈췄을 때 | **빨강** |
 
@@ -216,7 +233,7 @@ uv run runner.py submit 1 --name 2020-12345
 #   ...
 ```
 
-압축하기 전에 한 번 채점해서 결과를 보여 드리고, `TODO` 가 남은 과제가 있으면 알려 드립니다 (막지는 않습니다).
+압축하기 전에 한 번 채점해서 결과를 보여 드리고, 아직 구현하지 않은 과제가 있으면 알려 드립니다 (막지는 않습니다).
 푼 것만 골라 내려면 `--task`, 문제 설명도 같이 넣으려면 `--with-problem`,
 채점을 건너뛰려면 `--no-check` 를 붙이시면 됩니다.
 
