@@ -38,7 +38,7 @@ uv run runner.py test 1 --task detect_cycle  # 한 과제만 채점합니다
 과제를 다 풀고 더 연습하고 싶으시면 아래 문제들을 권합니다.
 꼭 다 풀어야 하는 것은 아니고, 약한 유형을 골라 두세 문제만 해 보셔도 충분합니다.
 
-### 느린 포인터와 빠른 포인터
+### Fast and slow pointers
 
 | | 문제 | 난이도 |
 |---|---|---|
@@ -47,7 +47,7 @@ uv run runner.py test 1 --task detect_cycle  # 한 과제만 채점합니다
 | 82 | [Remove Duplicates from Sorted List II](https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/) | Medium |
 | 1721 | [Swapping Nodes in a Linked List](https://leetcode.com/problems/swapping-nodes-in-a-linked-list/) | Medium |
 
-### 리스트 뒤집기
+### Reversing a linked list
 
 | | 문제 | 난이도 |
 |---|---|---|
@@ -55,7 +55,7 @@ uv run runner.py test 1 --task detect_cycle  # 한 과제만 채점합니다
 | 2074 | [Reverse Nodes in Even Length Groups](https://leetcode.com/problems/reverse-nodes-in-even-length-groups/) | Medium |
 | 2130 | [Maximum Twin Sum of a Linked List](https://leetcode.com/problems/maximum-twin-sum-of-a-linked-list/) | Medium |
 
-### 그 밖에
+### General
 
 | | 문제 | 난이도 |
 |---|---|---|
@@ -67,7 +67,7 @@ uv run runner.py test 1 --task detect_cycle  # 한 과제만 채점합니다
 이번 주 과제와 짝이 되는 문제들이 있습니다. 707번은 C 구현 과제와 거의 같은 내용이고,
 82번은 `cpp/easy_remove_duplicates` 에서 한 걸음 더 나간 문제(중복된 값을 아예 다 지웁니다)입니다.
 2074번은 `cpp/medium_reverse_in_k_groups` 와 같은 묶음 뒤집기이고,
-234번과 2130번은 느린/빠른 포인터로 중간을 찾은 다음 뒤집는, 두 과제를 합친 형태입니다.
+234번과 2130번은 fast and slow pointer 로 중간을 찾은 다음 뒤집는, 두 과제를 합친 형태입니다.
 
 ## 이번 주에 익혀 두면 좋은 것
 
