@@ -8,7 +8,7 @@ C++ 와 Python 에서는 그 위에 얹힌 집합과 맵을 실제 문제에 써
 
 | 과제 | 언어 | 난이도 | 내용 |
 |---|---|---|---|
-| [`c/easy_find_duplicates`](c/easy_find_duplicates/problem.md) | C | 쉬움 | 0~99 에서 중복 찾기 (직접 주소 표) |
+| [`c/easy_find_duplicates`](c/easy_find_duplicates/problem.md) | C | 쉬움 | `0~99` 에서 중복 찾기 (직접 주소 표) |
 | [`cpp/easy_intersection`](cpp/easy_intersection/problem.md) | C++ | 쉬움 | 두 배열의 교집합 (hash set) |
 | [`cpp/medium_subarray_sum`](cpp/medium_subarray_sum/problem.md) | C++ | 중간 | 합이 k 인 부분 배열 개수 (prefix sum + hash map) |
 | [`python/easy_counting`](python/easy_counting/problem.md) | Python | 쉬움 | 빈도 세기 세 가지 |

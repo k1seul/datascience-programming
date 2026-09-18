@@ -44,5 +44,6 @@ uv run runner.py test 2 --task counting
   `collections.defaultdict` 를 쓰면 또 어떻게 달라질까요?
 - `is_anagram` 을 세지 않고 `sorted(left) == sorted(right)` 로도 풀 수 있습니다.
   길이가 n 일 때 두 방법의 시간복잡도는 각각 얼마인가요?
-- `first_unique` 에서 "가장 먼저 나온" 을 알 수 있는 이유는 무엇일까요?
+- `first_unique` 의 두 번째 순회를 문자열 대신 **딕셔너리로** 돌아도 같은 답이 나올까요?
   파이썬 딕셔너리가 넣은 순서를 기억한다는 사실과 관계가 있습니다.
+  (3.7 이전에는 그렇지 않았습니다.)

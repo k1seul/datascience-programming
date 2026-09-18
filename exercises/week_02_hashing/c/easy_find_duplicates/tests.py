@@ -159,6 +159,20 @@ def test_find_duplicates_rejects_out_of_range(api, bad):
     assert api.find_duplicates([1, 1, bad])[0] == -2
 
 
+# --- 오류 우선순위 ---------------------------------------------------------
+
+
+def test_range_error_beats_a_duplicate_found_earlier(api):
+    # 5 repeats before 200 shows up, but the range check still wins.
+    assert api.has_duplicate([5, 5, 200]) == -1
+    assert api.first_duplicate([5, 5, 200]) == -2
+    assert api.find_duplicates([5, 5, 200])[0] == -2
+
+
+def test_range_error_beats_a_capacity_shortage(api):
+    assert api.find_duplicates([1, 1, 2, 2, 200], capacity=0)[0] == -2
+
+
 # --- 무작위 대조 -----------------------------------------------------------
 
 
