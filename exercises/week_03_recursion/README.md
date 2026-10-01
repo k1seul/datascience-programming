@@ -59,6 +59,70 @@ uv run runner.py test 3 --task hanoi          # 한 과제만 채점합니다
   호출이 갈라지는 모양을 트리로 보여 줍니다. 백트래킹을 이해할 때 도움이 됩니다.
 - [Python 공식 문서 — `sys.setrecursionlimit`](https://docs.python.org/3/library/sys.html#sys.setrecursionlimit)
 
+## 더 풀어 볼 문제 (LeetCode)
+
+과제를 다 풀고 더 연습하고 싶으시면 아래 문제들을 권합니다.
+꼭 다 풀어야 하는 것은 아니고, 약한 유형을 골라 두세 문제만 해 보셔도 충분합니다.
+묶음은 이번 주 과제 네 개와 같은 순서입니다.
+
+### Basic recursion
+
+| | 문제 | 난이도 |
+|---|---|---|
+| 509 | [Fibonacci Number](https://leetcode.com/problems/fibonacci-number/) | Easy |
+| 70 | [Climbing Stairs](https://leetcode.com/problems/climbing-stairs/) | Easy |
+| 50 | [Pow(x, n)](https://leetcode.com/problems/powx-n/) | Medium |
+
+앞의 두 문제는 **순수 재귀로 먼저 풀어 보고, 그다음 메모이제이션을 붙여 보시길** 권합니다.
+`fib(40)` 을 순수 재귀로 돌리면 눈에 보이게 느려지는데, 이미 계산한 값을 딕셔너리나
+배열에 저장해 두면 즉시 끝납니다. 지난주 해싱이 이번 주 재귀를 구하는 셈이죠.
+이번 주 과제에서는 빠진 부분이라 여기서 꼭 해 보시면 좋겠습니다.
+
+50번은 `x^n` 을 `n` 번 곱하지 않고 반으로 쪼개는 문제입니다. 분할 정복의 가장 작은 예입니다.
+
+### Recursive structures
+
+구조 자체가 재귀적인 데이터를 다룹니다. 연결 리스트가 대표적입니다.
+
+| | 문제 | 난이도 |
+|---|---|---|
+| 206 | [Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/) | Easy |
+| 21 | [Merge Two Sorted Lists](https://leetcode.com/problems/merge-two-sorted-lists/) | Easy |
+| 24 | [Swap Nodes in Pairs](https://leetcode.com/problems/swap-nodes-in-pairs/) | Medium |
+
+206번은 Week 01 에서 반복문으로 풀었던 그 문제입니다. **이번엔 재귀로** 풀어 보세요.
+같은 일을 두 방식으로 써 보면 차이가 선명해집니다.
+21번의 병합 부분은 이번 주 머지 소트 과제의 병합 단계와 똑같습니다.
+
+### Divide and conquer
+
+| | 문제 | 난이도 |
+|---|---|---|
+| 169 | [Majority Element](https://leetcode.com/problems/majority-element/) | Easy |
+| 912 | [Sort an Array](https://leetcode.com/problems/sort-an-array/) | Medium |
+| 148 | [Sort List](https://leetcode.com/problems/sort-list/) | Medium |
+
+912번은 이번 주 C++ 과제와 사실상 같은 문제입니다. 다른 언어로 다시 써 보기 좋습니다.
+148번은 **연결 리스트에 머지 소트를 적용**하는 문제라 Week 01 과 이번 주가 합쳐집니다.
+배열과 달리 가운데를 찾는 일부터 쉽지 않은데, 거기서 Week 01 의 느린/빠른 포인터가 다시 나옵니다.
+
+### Backtracking
+
+| | 문제 | 난이도 |
+|---|---|---|
+| 78 | [Subsets](https://leetcode.com/problems/subsets/) | Medium |
+| 46 | [Permutations](https://leetcode.com/problems/permutations/) | Medium |
+| 22 | [Generate Parentheses](https://leetcode.com/problems/generate-parentheses/) | Medium |
+| 17 | [Letter Combinations of a Phone Number](https://leetcode.com/problems/letter-combinations-of-a-phone-number/) | Medium |
+| 90 | [Subsets II](https://leetcode.com/problems/subsets-ii/) | Medium |
+| 51 | [N-Queens](https://leetcode.com/problems/n-queens/) | Hard |
+
+78번과 46번은 이번 주 Python 과제와 같은 문제입니다. C++ 로 다시 써 보면 답을 모으는 자리를
+직접 관리해야 해서 또 다른 공부가 됩니다.
+**90번은 과제의 "생각해 볼 것" 에서 물어본 중복 처리**에 대한 답입니다. 과제를 푼 뒤 바로 보세요.
+22번과 17번은 "넣는다 / 안 넣는다" 두 갈래가 아니라 **여러 갈래**로 퍼지는 모양이라 한 걸음 더 나갑니다.
+51번은 어렵습니다. 백트래킹에 익숙해졌다고 느껴질 때 도전해 보세요.
+
 ## 이번 주에 익혀 두면 좋은 것
 
 - 기저 조건을 **먼저** 적는 습관. 재귀가 안 멈추는 버그는 거의 다 여기서 옵니다
