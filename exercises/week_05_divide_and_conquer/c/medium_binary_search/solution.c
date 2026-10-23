@@ -6,22 +6,22 @@
  * The grader reads them as "not written yet"; anything else counts as a real answer. */
 #define NOT_IMPLEMENTED (-1000)
 
-int find_trade(const int *ts, int n, int t)
+int binary_search(const int *values, int n, int target)
 {
     return NOT_IMPLEMENTED;
 }
 
-int first_at_or_after(const int *ts, int n, int t)
+int lower_bound(const int *values, int n, int target)
 {
     return NOT_IMPLEMENTED;
 }
 
-int first_after(const int *ts, int n, int t)
+int upper_bound(const int *values, int n, int target)
 {
     return NOT_IMPLEMENTED;
 }
 
-int count_in_range(const int *ts, int n, int lo, int hi)
+int count_equal(const int *values, int n, int target)
 {
     return NOT_IMPLEMENTED;
 }
