@@ -17,5 +17,9 @@ wheels/
 *.so
 *.o
 
+# main.c 를 직접 컴파일해서 생기는 실행 파일
+exercises/**/main
+a.out
+
 # 제출용 zip
 submissions/

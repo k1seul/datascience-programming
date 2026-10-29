@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import ctypes
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -16,20 +17,60 @@ from harness.native import BuildFailed, CompilerMissing, load
 NOT_IMPLEMENTED = -1000
 
 
-def native_lib(src: Path) -> ctypes.CDLL:
+def native_lib(src: Path, track_alloc: bool = False) -> ctypes.CDLL:
     """Build and load a source.
 
     Skips the test when no compiler is available, and fails it with the compiler
-    output when the submitted code does not compile.
+    output when the submitted code does not compile. With track_alloc (C only), the
+    library also counts allocations; read them with live_allocations().
     """
     try:
-        return load(src)
+        return load(src, track_alloc)
     except CompilerMissing as exc:
         pytest.skip(str(exc))
     except FileNotFoundError:
         pytest.skip(f"{src.name} does not exist yet")
     except BuildFailed as exc:
         pytest.fail(f"{src.name} failed to compile:\n{exc}", pytrace=False)
+
+
+def live_allocations(lib: ctypes.CDLL) -> int:
+    """Blocks the solution allocated and has not freed yet (needs track_alloc=True)."""
+    fn = lib.harness_live_allocations
+    fn.argtypes = []
+    fn.restype = ctypes.c_int
+    return fn()
+
+
+def total_allocations(lib: ctypes.CDLL) -> int:
+    """Blocks the solution allocated so far, freed or not (needs track_alloc=True)."""
+    fn = lib.harness_total_allocations
+    fn.argtypes = []
+    fn.restype = ctypes.c_int
+    return fn()
+
+
+@cache
+def _libc() -> ctypes.CDLL:
+    try:
+        return ctypes.CDLL(None)
+    except (OSError, TypeError):
+        pytest.skip("C 의 출력을 잡을 수 없는 환경입니다. WSL, macOS, Linux 에서 실행해 주세요")
+
+
+def _flush_native_stdout() -> None:
+    # C keeps stdout in its own buffer when it is not a terminal, so push it out before
+    # pytest reads the file descriptor.
+    _libc().fflush(None)
+
+
+def native_stdout[T](capfd: pytest.CaptureFixture[str], call: Callable[[], T]) -> tuple[T, str]:
+    """Run call and return (its result, everything native code printed to stdout)."""
+    _flush_native_stdout()
+    capfd.readouterr()
+    result = call()
+    _flush_native_stdout()
+    return result, capfd.readouterr().out
 
 
 def list_out_call(

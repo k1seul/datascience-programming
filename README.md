@@ -191,6 +191,12 @@ C 구현 과제에서는 `list_create()` 가 `NULL` 을 돌려주는 것이 같�
 배열을 주고받는 문제는 `int f(const int *values, int n, ..., int *out, int out_capacity)` 형태로 통일했고,
 `harness.list_out_call` 이 이것을 파이썬 리스트 호출처럼 감싸 줍니다. 반환값이 음수면 오류로 봅니다.
 
+C 과제 중에는 메모리 해제와 출력까지 확인하는 것도 있습니다 (Week 06 부터).
+
+- **메모리**: `native_lib(소스, track_alloc=True)` 로 빌드하면 답안의 `malloc`, `calloc`, `realloc`, `free` 가
+  횟수를 세는 함수(`harness/alloc_track.c`)로 바뀌어 컴파일됩니다. 답안 코드는 고칠 필요가 없습니다.
+- **출력**: `harness.native_stdout` 이 C 의 `printf` 출력을 잡아서 글자 단위로 비교합니다.
+
 컴파일러가 없는 환경에서는 해당 테스트가 실패가 아니라 **skip** 으로 처리되니 걱정하지 않으셔도 됩니다.
 
 연결 리스트를 다루다 보면 포인터를 잘못 이어서 무한 루프에 빠지는 일이 흔합니다.

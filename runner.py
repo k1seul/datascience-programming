@@ -45,8 +45,8 @@ DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
 # the upstream remote for someone who only clicked "Fork" and never touched git remotes.
 UPSTREAM_URL = "https://github.com/k1seul/datascience-programming.git"
 UPSTREAM_BRANCH = "main"
-# Files that belong to the grader, never to a submission.
-SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py"}
+# Files that belong to the grader, or binaries built from main.c, never to a submission.
+SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py", "main", "a.out"}
 STATUS_ICON = {
     "pass": "✅",
     "fail": "❌",
