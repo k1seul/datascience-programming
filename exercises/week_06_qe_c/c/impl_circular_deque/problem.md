@@ -33,7 +33,7 @@ capacity = 4, front = 3, size = 3
 
 인덱스    0     1     2     3
 buf    [  1  |  2  |  ?  |  0  ]
-                             ^ front
+                            ^ front
 
 앞에서부터 읽으면 buf[3], buf[0], buf[1]  ->  0, 1, 2
 ```
