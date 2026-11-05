@@ -8,6 +8,7 @@ from harness.pytest_helpers import (
     native_lib,
     native_stdout,
     total_allocations,
+    within_seconds,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "native_lib",
     "native_stdout",
     "total_allocations",
+    "within_seconds",
 ]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import threading
 from collections.abc import Callable, Sequence
 from functools import cache
 from pathlib import Path
@@ -71,6 +72,41 @@ def native_stdout[T](capfd: pytest.CaptureFixture[str], call: Callable[[], T]) -
     result = call()
     _flush_native_stdout()
     return result, capfd.readouterr().out
+
+
+class _Abandoned(Exception):
+    """Raised inside a call that within_seconds gave up on, to stop it."""
+
+
+def within_seconds[T](seconds: float, call: Callable[[], T], too_slow: str) -> T:
+    """Run call and fail the test with too_slow when it has not returned in time.
+
+    A slow answer (plain recursion where memoization was asked for) would otherwise hit
+    pytest-timeout, which ends the whole pytest run instead of failing one test. The call
+    runs on a daemon thread, so an abandoned one is dropped when pytest exits.
+    """
+    value: list[T] = []
+    error: list[BaseException] = []
+
+    def run() -> None:
+        try:
+            value.append(call())
+        except BaseException as exc:  # handed back to the test below
+            error.append(exc)
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(seconds)
+    if worker.is_alive():
+        # Python code left running would hog the GIL and slow every later test, so raise
+        # into it. Native code holds no GIL; it just runs on until pytest exits.
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(
+            ctypes.c_ulong(worker.ident or 0), ctypes.py_object(_Abandoned)
+        )
+        pytest.fail(too_slow, pytrace=False)
+    if error:
+        raise error[0]
+    return value[0]
 
 
 def list_out_call(
