@@ -36,7 +36,8 @@ WEEK_RE = re.compile(r"^week_(\d+)(?:_(\w+))?$")
 
 LANGUAGES = ["c", "cpp", "python"]
 LANG_LABEL = {"c": "C", "cpp": "C++", "python": "Python"}
-LANG_SUFFIX = {"c": ".c", "cpp": ".cpp", "python": ".py"}
+# Files a student edits, by extension. A C++ task may keep its classes in a header.
+LANG_SUFFIX = {"c": (".c",), "cpp": (".cpp", ".hpp"), "python": (".py",)}
 DIFFICULTIES = ["impl", "easy", "medium", "hard"]
 DIFFICULTY_LABEL = {"impl": "구현", "easy": "쉬움", "medium": "중간", "hard": "어려움"}
 DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
@@ -45,8 +46,9 @@ DEFAULT_TASKS = "c/impl,cpp/easy,cpp/medium,python/easy,python/medium"
 # the upstream remote for someone who only clicked "Fork" and never touched git remotes.
 UPSTREAM_URL = "https://github.com/k1seul/datascience-programming.git"
 UPSTREAM_BRANCH = "main"
-# Files that belong to the grader, or binaries built from main.c, never to a submission.
-SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py", "main", "a.out"}
+# Files that belong to the grader, or binaries built from main.c / main.cpp, never to a
+# submission.
+SUBMIT_SKIP = {"tests.py", "__init__.py", "conftest.py", "shim.cpp", "main", "a.out"}
 STATUS_ICON = {
     "pass": "✅",
     "fail": "❌",
@@ -114,8 +116,10 @@ class Task:
 
     @property
     def sources(self) -> list[Path]:
-        suffix = LANG_SUFFIX.get(self.language, "")
-        return [p for p in sorted(self.path.glob(f"*{suffix}")) if p.name != "tests.py"]
+        suffixes = LANG_SUFFIX.get(self.language, ())
+        return [
+            p for p in sorted(self.path.iterdir()) if p.suffix in suffixes and p.name != "tests.py"
+        ]
 
     def looks_unwritten(self) -> bool:
         """Cheap guess used by `list --fast`, which does not run the tests.

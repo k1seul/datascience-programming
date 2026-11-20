@@ -66,7 +66,12 @@ def build(src: Path, track_alloc: bool = False) -> Path:
     if shutil.which(compiler) is None:
         raise CompilerMissing(f"{compiler} was not found on PATH")
 
-    inputs = [src, ALLOC_TRACK_HEADER, ALLOC_TRACK_SOURCE] if track_alloc else [src]
+    # Headers next to the source count too: a test shim builds a .cpp that includes the
+    # solution's .hpp, and editing only the header must still trigger a rebuild.
+    headers = [*src.parent.glob("*.h"), *src.parent.glob("*.hpp")]
+    inputs = [src, *headers]
+    if track_alloc:
+        inputs += [ALLOC_TRACK_HEADER, ALLOC_TRACK_SOURCE]
     lib = library_path(src, track_alloc)
     if lib.exists() and lib.stat().st_mtime >= max(p.stat().st_mtime for p in inputs):
         return lib
