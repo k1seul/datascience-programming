@@ -17,6 +17,16 @@ using namespace std;
  * The grader reads them as "not written yet"; anything else counts as a real answer. */
 #define NOT_IMPLEMENTED (-1000)
 
+/* Greatest common divisor of a and b (both >= 0). gcd(0, b) is b. Given; use it. */
+inline int gcd(int a, int b) {
+    while (b != 0) {
+        int t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
 /* ===== (a) Fraction ==================================================== */
 
 class Fraction {
@@ -36,11 +46,6 @@ public:
     int getDen() const { return den; }
 
     Fraction operator+(const Fraction &other) const {
-        /* TODO */
-        return Fraction(NOT_IMPLEMENTED, 1);
-    }
-
-    Fraction operator-(const Fraction &other) const {
         /* TODO */
         return Fraction(NOT_IMPLEMENTED, 1);
     }
@@ -112,34 +117,7 @@ public:
     }
 };
 
-class Triangle : public Shape {
-protected:
-    int base;
-    int height;
-
-public:
-    Triangle(int base, int height) : base(0), height(0) {
-        /* TODO */
-    }
-
-    double area() const {
-        /* TODO: base * height / 2, as a double (3 * 5 / 2 is 7.5, not 7) */
-        return NOT_IMPLEMENTED;
-    }
-
-    string name() const {
-        /* TODO: "Triangle" */
-        return "NOT_IMPLEMENTED";
-    }
-};
-
-/* true when a has a smaller area than b */
-bool operator<(const Shape &a, const Shape &b) {
-    /* TODO */
-    return false;
-}
-
-/* Prints name(area) with one digit after the point: Square(9.0), Triangle(7.5) */
+/* Prints name(area) with one digit after the point: Rectangle(12.0), Square(9.0) */
 ostream &operator<<(ostream &os, const Shape &s) {
     /* TODO */
     os << "NOT_IMPLEMENTED";

@@ -25,16 +25,6 @@ int dq_is_empty(const Deque *dq)
     return NOT_IMPLEMENTED;
 }
 
-int dq_is_full(const Deque *dq)
-{
-    return NOT_IMPLEMENTED;
-}
-
-int dq_push_front(Deque *dq, int value)
-{
-    return NOT_IMPLEMENTED;
-}
-
 int dq_push_back(Deque *dq, int value)
 {
     return NOT_IMPLEMENTED;

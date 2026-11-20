@@ -15,7 +15,7 @@ static void print_deque(const Deque *dq)
     printf("[");
     for (int i = 0; i < dq->size; i++)
         printf(i ? ", %d" : "%d", dq->buf[(dq->front + i) % dq->capacity]);
-    printf("]  front=%d rear=%d size=%d\n", dq->front, dq->rear, dq->size);
+    printf("]  front=%d size=%d\n", dq->front, dq->size);
 }
 
 static void print_array(const int *values, int n)
@@ -37,7 +37,7 @@ int main(void)
     dq_push_back(dq, 2);
     dq_push_back(dq, 3);
     print_deque(dq);
-    printf("Expected: [1, 2, 3]  front=0 rear=0 size=3\n");
+    printf("Expected: [1, 2, 3]  front=0 size=3\n");
 
     int full = dq_push_back(dq, 4);
     printf("push_back on a full deque returned %d\n", full);
@@ -50,12 +50,15 @@ int main(void)
 
     dq_push_back(dq, 4);
     print_deque(dq);
-    printf("Expected: [2, 3, 4]  front=1 rear=1 size=3\n");
+    printf("Expected: [2, 3, 4]  front=1 size=3\n");
 
     dq_pop_back(dq, &v);
-    dq_push_front(dq, 9);
-    print_deque(dq);
-    printf("Expected: [9, 2, 3]  front=0 rear=0 size=3\n");
+    printf("pop_back -> %d\n", v);
+    printf("Expected: pop_back -> 4\n");
+
+    dq_peek_front(dq, &v);
+    printf("peek_front -> %d\n", v);
+    printf("Expected: peek_front -> 2\n");
     dq_free(dq);
 
     printf("\n== (b) days until a warmer day ==\n");

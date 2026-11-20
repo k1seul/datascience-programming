@@ -5,8 +5,8 @@
 | 과제 | 언어 | 연습하는 것 | 예상 시간 |
 |---|---|---|---|
 | [`python/medium_shift_schedule`](python/medium_shift_schedule/problem.md) | Python | 고르기 DP와 되짚기 (Week 07) | 40분 |
-| [`c/medium_deque_windows`](c/medium_deque_windows/problem.md) | C | 원형 덱 (Week 06), 덱에 인덱스를 넣고 빼며 한 번에 훑기 | 1~1.5시간 |
-| [`cpp/medium_fraction_shapes`](cpp/medium_fraction_shapes/problem.md) | C++ | **클래스**: 연산자 오버로딩, 상속, `virtual` | 1~1.5시간 |
+| [`c/medium_deque_windows`](c/medium_deque_windows/problem.md) | C | 원형 덱 (Week 06), 덱에 인덱스를 넣고 빼며 한 번에 훑기 | 40분~1시간 |
+| [`cpp/medium_fraction_shapes`](cpp/medium_fraction_shapes/problem.md) | C++ | **클래스**: 연산자 오버로딩, 상속, `virtual` | 40분~1시간 |
 
 **C++ 부터 보세요.** Python 과 C 는 Week 06, 07 에서 한 것을 다른 문제에 적용하는 것이지만,
 C++ 클래스는 이번이 처음입니다. 아래 [C++ 클래스 한눈에 보기](#c-클래스-한눈에-보기)를 먼저 읽고 시작하세요.
@@ -25,7 +25,7 @@ uv run runner.py test 8 --task fraction_shapes    # C++ 만
 [`exam/qe_practice.pdf`](exam/qe_practice.pdf) 는 이번 주 세 문제를 **논자시 시험지 형식**으로 묶은 문제지입니다.
 실제 시험처럼 영어로 쓰여 있고, 힌트는 없습니다. 문제와 정답 조건은 각 과제의 `problem.md` 와 같습니다.
 
-1. 타이머를 **3시간**에 맞추고, 문제지와 터미널만 띄워 둡니다. `problem.md` 와 힌트는 보지 않습니다.
+1. 타이머를 **2시간 30분**에 맞추고, 문제지와 터미널만 띄워 둡니다. `problem.md` 와 힌트는 보지 않습니다.
 2. 시험장처럼 **채점기는 돌리지 않고** 직접 확인합니다. 아래 명령은 저장소 맨 위 폴더에서 실행합니다.
 
    ```sh

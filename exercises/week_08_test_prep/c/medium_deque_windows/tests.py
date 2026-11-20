@@ -50,7 +50,6 @@ class DequeStruct(ctypes.Structure):
         ("capacity", ctypes.c_int),
         ("size", ctypes.c_int),
         ("front", ctypes.c_int),
-        ("rear", ctypes.c_int),
     ]
 
 
@@ -63,12 +62,10 @@ def _bind(lib: ctypes.CDLL) -> ctypes.CDLL:
     lib.dq_create.restype = DEQUE_P
     lib.dq_free.argtypes = [DEQUE_P]
     lib.dq_free.restype = None
-    for name in ("dq_is_empty", "dq_is_full"):
-        getattr(lib, name).argtypes = [DEQUE_P]
-        getattr(lib, name).restype = ctypes.c_int
-    for name in ("dq_push_front", "dq_push_back"):
-        getattr(lib, name).argtypes = [DEQUE_P, ctypes.c_int]
-        getattr(lib, name).restype = ctypes.c_int
+    lib.dq_is_empty.argtypes = [DEQUE_P]
+    lib.dq_is_empty.restype = ctypes.c_int
+    lib.dq_push_back.argtypes = [DEQUE_P, ctypes.c_int]
+    lib.dq_push_back.restype = ctypes.c_int
     for name in ("dq_pop_front", "dq_pop_back", "dq_peek_front", "dq_peek_back"):
         getattr(lib, name).argtypes = [DEQUE_P, INT_P]
         getattr(lib, name).restype = ctypes.c_int
@@ -111,19 +108,8 @@ class Deque:
         raw = self.raw
         return [raw.buf[(raw.front + i) % raw.capacity] for i in range(raw.size)]
 
-    def check_rear(self) -> None:
-        raw = self.raw
-        expected = (raw.front + raw.size) % raw.capacity
-        assert raw.rear == expected, (
-            f"rear 가 {raw.rear} 입니다. front {raw.front}, size {raw.size} 이면 "
-            f"(front + size) % capacity = {expected} 이어야 합니다"
-        )
-
     def push_back(self, *values: int) -> list[int]:
         return [checked(self.lib.dq_push_back(self.ptr, v)) for v in values]
-
-    def push_front(self, *values: int) -> list[int]:
-        return [checked(self.lib.dq_push_front(self.ptr, v)) for v in values]
 
     def _take(self, name: str) -> tuple[int, int]:
         out = ctypes.c_int(-777)
@@ -144,9 +130,6 @@ class Deque:
 
     def is_empty(self) -> int:
         return checked(self.lib.dq_is_empty(self.ptr))
-
-    def is_full(self) -> int:
-        return checked(self.lib.dq_is_full(self.ptr))
 
     def free(self) -> None:
         self.lib.dq_free(self.ptr)
@@ -201,9 +184,8 @@ def negatives(lib: ctypes.CDLL, nums: Sequence[int], k: int, too_slow: str = STU
 def test_a_create_starts_empty(make):
     dq = make(4)
     raw = dq.raw
-    assert (raw.capacity, raw.size, raw.front, raw.rear) == (4, 0, 0, 0)
+    assert (raw.capacity, raw.size, raw.front) == (4, 0, 0)
     assert dq.is_empty() == 1
-    assert dq.is_full() == 0
 
 
 @pytest.mark.parametrize("capacity", [0, -3])
@@ -228,26 +210,20 @@ def test_a_push_back_and_pop_front_keep_order(make):
     dq = make(4)
     assert dq.push_back(10, 20, 30) == [1, 1, 1]
     assert dq.contents() == [10, 20, 30]
-    dq.check_rear()
+    assert dq.is_empty() == 0
     assert dq.pop_front() == (1, 10)
     assert dq.pop_front() == (1, 20)
     assert dq.contents() == [30]
-    dq.check_rear()
+    assert dq.raw.front == 2, "pop_front 를 두 번 하면 front 는 두 칸 오른쪽으로 갑니다"
 
 
-def test_a_push_front_and_pop_back(make):
+def test_a_pop_back_takes_the_last(make):
     dq = make(4)
-    dq.push_front(1)
-    raw = dq.raw
-    assert raw.front == 3, "빈 덱에 push_front 하면 front 는 0 에서 capacity - 1 로 넘어갑니다"
-    assert raw.rear == 0, "push_front 는 rear 를 바꾸지 않습니다"
-    dq.push_front(2)
-    dq.push_back(3)
-    assert dq.contents() == [2, 1, 3]
+    dq.push_back(1, 2, 3)
     assert dq.pop_back() == (1, 3)
-    assert dq.pop_back() == (1, 1)
-    assert dq.contents() == [2]
-    dq.check_rear()
+    assert dq.pop_back() == (1, 2)
+    assert dq.contents() == [1]
+    assert dq.raw.front == 0, "pop_back 은 front 를 바꾸지 않습니다"
 
 
 def test_a_peek_does_not_remove(make):
@@ -258,14 +234,11 @@ def test_a_peek_does_not_remove(make):
     assert dq.contents() == [4, 5, 6]
 
 
-def test_a_full_deque_rejects_pushes(make):
+def test_a_full_deque_rejects_push(make):
     dq = make(2)
     dq.push_back(1, 2)
-    assert dq.is_full() == 1
     assert dq.push_back(3) == [0]
-    assert dq.push_front(0) == [0]
     assert dq.contents() == [1, 2], "꽉 찬 덱에 넣으려다 실패하면 덱은 그대로여야 합니다"
-    dq.check_rear()
 
 
 def test_a_empty_deque_leaves_out_alone(make):
@@ -277,29 +250,28 @@ def test_a_empty_deque_leaves_out_alone(make):
 def test_a_indices_wrap_around(make):
     dq = make(3)
     dq.push_back(1, 2, 3)
-    assert dq.raw.rear == 0, "마지막 칸에 쓰고 나면 rear 는 0 으로 돌아옵니다"
     dq.pop_front()
     dq.push_back(4)
-    assert dq.raw.buf[0] == 4, "rear 가 0 이었으니 4 는 buf[0] 에 들어가야 합니다"
+    wrapped = "front 가 1, size 가 2 였으니 4 는 (1 + 2) % 3 = 0 번 칸에 들어가야 합니다"
+    assert dq.raw.buf[0] == 4, wrapped
     assert dq.contents() == [2, 3, 4]
+    assert dq.peek_back() == (1, 4)
     dq.pop_front()
     dq.pop_front()
     dq.push_back(5, 6)
     assert dq.contents() == [4, 5, 6]
-    dq.check_rear()
 
 
 def test_a_mixed_sequence(make):
-    dq = make(5)
-    dq.push_back(3)
-    dq.push_front(2)
-    dq.push_back(4)
-    dq.push_front(1)
-    dq.pop_back()
-    dq.push_back(9)
+    dq = make(3)
+    dq.push_back(3, 4)
     dq.pop_front()
-    assert dq.contents() == [2, 3, 9]
-    dq.check_rear()
+    dq.push_back(9)
+    dq.pop_back()
+    dq.push_back(7, 8)
+    assert dq.contents() == [4, 7, 8]
+    assert dq.peek_front() == (1, 4)
+    assert dq.peek_back() == (1, 8)
 
 
 # --- (b) days_until_warmer -------------------------------------------------

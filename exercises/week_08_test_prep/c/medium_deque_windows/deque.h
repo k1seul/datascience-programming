@@ -11,25 +11,25 @@ typedef struct {
     int capacity;   /* how many values fit */
     int size;       /* how many values are stored now */
     int front;      /* index of the first value */
-    int rear;       /* index right after the last value: where push_back writes next */
 } Deque;
 
-/* Always true: rear == (front + size) % capacity. */
+/* The values, first to last, are buf[front], buf[(front + 1) % capacity], ...,
+ * size of them in total. */
 
 /* ---- (a) circular deque ---------------------------------------------- */
 
-/* Empty deque with room for capacity values; front and rear start at 0.
+/* Empty deque with room for capacity values; size and front start at 0.
  * Returns NULL when capacity < 1. */
 Deque *dq_create(int capacity);
 
 /* Frees buf and the deque. Does nothing for NULL. */
 void dq_free(Deque *dq);
 
+/* 1 when the deque holds no values, 0 otherwise. */
 int dq_is_empty(const Deque *dq);
-int dq_is_full(const Deque *dq);
 
-/* Return 1 on success. Return 0 and change nothing when the deque is full. */
-int dq_push_front(Deque *dq, int value);
+/* Adds value after the last value and returns 1.
+ * Returns 0 and changes nothing when the deque is full. */
 int dq_push_back(Deque *dq, int value);
 
 /* Store the first / last value in *out and return 1 (pop also removes it).

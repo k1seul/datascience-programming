@@ -7,13 +7,14 @@
 
 | 소문항 | 함수 | 배점 |
 |---|---|---|
-| (a) | `dq_create`, `dq_free`, `dq_is_empty`, `dq_is_full`, `push` / `pop` / `peek` 여섯 개 | 40 |
+| (a) | `dq_create`, `dq_free`, `dq_is_empty`, `dq_push_back`, `pop` / `peek` 네 개 | 40 |
 | (b) | `days_until_warmer` | 30 |
 | (c) | `first_negative` | 30 |
 
 ## 구조체
 
 `deque.h` 에 이미 정의되어 있습니다. **이 파일은 고치지 마세요.** 함수는 모두 `solution.c` 에 작성합니다.
+Week 06 에서 만든 덱과 같은 구조입니다.
 
 ```c
 typedef struct {
@@ -21,19 +22,17 @@ typedef struct {
     int capacity;   /* 최대 몇 개까지 들어가는지 */
     int size;       /* 지금 몇 개 들어 있는지 */
     int front;      /* 맨 앞 원소가 있는 인덱스 */
-    int rear;       /* 맨 뒤 원소 바로 다음 칸: push_back 이 다음에 쓸 자리 */
 } Deque;
 ```
 
-Week 06 의 덱에 **`rear` 가 하나 더** 있습니다. 언제나 `rear == (front + size) % capacity` 가 되도록 유지하세요.
+덱의 원소는 `buf[front]` 부터 시작해서 오른쪽으로 `size` 개입니다. 배열 끝을 넘어가면 **처음(인덱스 0)으로 돌아옵니다.**
 
 ```
-capacity = 4, front = 3, size = 3, rear = 2
+capacity = 4, front = 3, size = 3
 
 인덱스    0     1     2     3
 buf    [  1  |  2  |  ?  |  0  ]
-                      ^     ^
-                    rear  front
+                            ^ front
 
 앞에서부터 읽으면 buf[3], buf[0], buf[1]  ->  0, 1, 2
 ```
@@ -44,8 +43,6 @@ buf    [  1  |  2  |  ?  |  0  ]
 Deque *dq_create(int capacity);
 void dq_free(Deque *dq);
 int dq_is_empty(const Deque *dq);
-int dq_is_full(const Deque *dq);
-int dq_push_front(Deque *dq, int value);
 int dq_push_back(Deque *dq, int value);
 int dq_pop_front(Deque *dq, int *out);
 int dq_pop_back(Deque *dq, int *out);
@@ -53,20 +50,20 @@ int dq_peek_front(const Deque *dq, int *out);
 int dq_peek_back(const Deque *dq, int *out);
 ```
 
-- `dq_create` 는 `front`, `rear`, `size` 를 모두 `0` 으로 둡니다. `capacity` 가 1 보다 작으면 `NULL` 을 반환합니다.
+- `dq_create` 는 `size` 와 `front` 를 `0` 으로 둡니다. `capacity` 가 1 보다 작으면 `NULL` 을 반환합니다.
 - `dq_free` 는 `buf` 와 덱을 해제합니다. `NULL` 을 받으면 아무것도 하지 않습니다.
-- `push`, `pop`, `peek` 은 **성공하면 `1`, 실패하면 `0`** 입니다. 꽉 찼을 때 `push`, 비었을 때 `pop` / `peek` 이 실패합니다.
+- `dq_is_empty` 는 비었으면 `1`, 아니면 `0` 입니다.
+- `push`, `pop`, `peek` 은 **성공하면 `1`, 실패하면 `0`** 입니다. 꽉 찼을 때 `push_back`, 비었을 때 `pop` / `peek` 이 실패합니다.
   실패하면 덱과 `*out` 을 건드리지 않습니다.
 
-각 함수가 바꾸는 값입니다.
+각 함수가 읽거나 쓰는 자리와 바꾸는 값입니다.
 
-| 함수 | 읽거나 쓰는 자리 | 바뀌는 것 |
+| 함수 | 자리 | 바뀌는 것 |
 |---|---|---|
-| `push_back` | `buf[rear]` 에 쓰기 | `rear` 한 칸 오른쪽, `size + 1` |
-| `push_front` | `front` 를 한 칸 왼쪽으로 옮긴 뒤 `buf[front]` 에 쓰기 | `size + 1` |
+| `push_back` | `(front + size) % capacity` 에 쓰기 | `size + 1` |
 | `pop_front` | `buf[front]` 읽기 | `front` 한 칸 오른쪽, `size - 1` |
-| `pop_back` | `rear` 를 한 칸 왼쪽으로 옮긴 뒤 `buf[rear]` 읽기 | `size - 1` |
-| `peek_back` | `rear` 바로 왼쪽 칸 읽기 | 없음 |
+| `pop_back` | `(front + size - 1) % capacity` 읽기 | `size - 1` (`front` 는 그대로) |
+| `peek_front` / `peek_back` | `pop` 과 같은 자리 읽기 | 없음 |
 
 ## (b) `days_until_warmer` — 30점
 
@@ -113,7 +110,7 @@ nums     12  -1  -7   8 -15  30  16  28       k = 3
 - **`malloc` 한 것은 모두 `free` 하세요.** 채점기가 `malloc` 과 `free` 횟수를 셉니다. (b), (c) 안에서 만든 덱도 해제해야 합니다.
 - **(b), (c) 는 큰 입력도 2초 안에 끝나야 합니다.** 채점기가 길이 20만짜리 입력을 넣습니다.
   날마다(창마다) 처음부터 다시 훑으면 10¹⁰ 번이 넘게 비교해서 끝나지 않습니다.
-- 원소를 `buf` 안에서 옮기지 마세요. 채점기가 `front`, `rear` 와 `buf` 를 직접 읽어서 확인합니다.
+- 원소를 `buf` 안에서 옮기지 마세요. 채점기가 `front` 와 `buf` 를 직접 읽어서 확인합니다.
 
 ## 직접 확인하기
 
@@ -142,12 +139,11 @@ uv run runner.py test 8 --task deque_windows -k test_a
 막힐 때 하나씩 펼쳐 보세요.
 
 <details>
-<summary>힌트 1 — 한 칸 왼쪽, 한 칸 오른쪽</summary>
+<summary>힌트 1 — Week 06 의 덱을 떠올리세요</summary>
 
-오른쪽으로 한 칸은 `(i + 1) % capacity`, 왼쪽으로 한 칸은 `(i - 1 + capacity) % capacity` 입니다.
-C 에서 `-1 % 4` 는 `3` 이 아니라 `-1` 이라서 `+ capacity` 가 꼭 필요합니다.
+Week 06 원형 덱과 구조가 같습니다. 그때 만든 함수에서 `push_front` 만 빠졌습니다.
 
-`pop_back` 과 `peek_back` 이 읽는 칸은 `rear` 가 아니라 **`rear` 의 한 칸 왼쪽**입니다.
+오른쪽으로 한 칸은 `(front + 1) % capacity` 입니다. `capacity - 1` 다음이 `0` 이 됩니다.
 
 </details>
 
@@ -186,13 +182,13 @@ dq_free(waiting);
 
 ## 자주 하는 실수
 
-**`rear` 를 갱신하지 않기**
+**`pop_back` 에서 `front` 를 바꾸기**
 
-`push_back` 에서 `size` 만 늘리고 `rear` 를 옮기지 않으면, 다음 `push_back` 이 같은 칸에 덮어씁니다.
+뒤에서 꺼낼 때는 `size` 만 줄이면 됩니다. 맨 앞 원소는 그대로이니 `front` 도 그대로입니다.
 
-**`push_front` 와 `pop_back` 에서 `-1` 을 그냥 쓰기**
+**나머지 연산을 빼먹기**
 
-`front` 나 `rear` 가 `0` 일 때 `-1` 이 되어 배열 밖을 읽고 씁니다. 힌트 1을 보세요.
+`front + size` 가 `capacity` 이상이 되면 배열 밖입니다. 자리를 계산할 때마다 `% capacity` 를 붙이세요.
 
 **값을 덱에 넣기**
 

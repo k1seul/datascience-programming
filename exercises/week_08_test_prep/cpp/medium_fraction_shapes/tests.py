@@ -19,8 +19,8 @@ SRC = HERE / "shim.cpp"
 INT_P = ctypes.POINTER(ctypes.c_int)
 STUB_TEXT = "NOT_IMPLEMENTED"
 
-RECTANGLE, SQUARE, TRIANGLE = 0, 1, 2
-ADD, SUB, MUL = 0, 1, 2
+RECTANGLE, SQUARE = 0, 1
+ADD, MUL = 0, 1
 
 
 def _bind(lib: ctypes.CDLL) -> ctypes.CDLL:
@@ -38,8 +38,6 @@ def _bind(lib: ctypes.CDLL) -> ctypes.CDLL:
     for name in ("shape_name", "shape_name_via_base", "shape_text"):
         getattr(lib, name).argtypes = [ctypes.c_int] * 3 + [ctypes.c_char_p, ctypes.c_int]
         getattr(lib, name).restype = ctypes.c_int
-    lib.shape_less.argtypes = [ctypes.c_int] * 6
-    lib.shape_less.restype = ctypes.c_int
     lib.square_sides.argtypes = [ctypes.c_int, INT_P, INT_P]
     lib.square_sides.restype = None
     return lib
@@ -118,11 +116,6 @@ class Api:
         )
         return out
 
-    def less(self, left: tuple[int, ...], right: tuple[int, ...]) -> bool:
-        self.area(*left)
-        # A square has one side; pad every shape to (kind, a, b) for the C call.
-        return bool(self.lib.shape_less(*(left + (0,))[:3], *(right + (0,))[:3]))
-
     def text_shape(self, kind: int, a: int, b: int = 0) -> str:
         out = text_of(self.lib.shape_text, kind, a, b)
         if not_written(out):
@@ -160,8 +153,7 @@ def test_a_constructor_reduces(api, num, den, expected):
         (ADD, (1, 2), (1, 3), (5, 6)),
         (ADD, (1, 4), (1, 4), (1, 2)),
         (ADD, (1, 2), (-1, 2), (0, 1)),
-        (SUB, (3, 4), (1, 4), (1, 2)),
-        (SUB, (1, 3), (1, 2), (-1, 6)),
+        (ADD, (-1, 3), (1, 6), (-1, 6)),
         (MUL, (2, 3), (3, 4), (1, 2)),
         (MUL, (-1, 2), (2, 5), (-1, 5)),
         (MUL, (5, 7), (0, 1), (0, 1)),
@@ -191,7 +183,7 @@ def test_a_print(api, num, den, expected):
 
 @pytest.mark.parametrize(
     ("shape", "expected"),
-    [((RECTANGLE, 3, 4), 12.0), ((SQUARE, 3), 9.0), ((TRIANGLE, 3, 5), 7.5)],
+    [((RECTANGLE, 3, 4), 12.0), ((RECTANGLE, 5, 1), 5.0), ((SQUARE, 3), 9.0)],
 )
 def test_b_area(api, shape, expected):
     assert api.area(*shape) == expected
@@ -199,7 +191,7 @@ def test_b_area(api, shape, expected):
 
 @pytest.mark.parametrize(
     ("shape", "expected"),
-    [((RECTANGLE, 3, 4), "Rectangle"), ((SQUARE, 3), "Square"), ((TRIANGLE, 3, 5), "Triangle")],
+    [((RECTANGLE, 3, 4), "Rectangle"), ((SQUARE, 3), "Square")],
 )
 def test_b_name(api, shape, expected):
     assert api.name(*shape) == expected
@@ -215,22 +207,11 @@ def test_b_square_calls_the_rectangle_constructor(api):
 
 @pytest.mark.parametrize(
     ("shape", "area", "name"),
-    [
-        ((RECTANGLE, 3, 4), 12.0, "Rectangle"),
-        ((SQUARE, 3), 9.0, "Square"),
-        ((TRIANGLE, 3, 5), 7.5, "Triangle"),
-    ],
+    [((RECTANGLE, 3, 4), 12.0, "Rectangle"), ((SQUARE, 3), 9.0, "Square")],
 )
 def test_b_virtual_through_shape(api, shape, area, name):
     assert api.area_via_base(*shape) == area
     assert api.name_via_base(*shape) == name
-
-
-def test_b_compare_by_area(api):
-    assert api.less((TRIANGLE, 3, 5), (SQUARE, 3)) is True
-    assert api.less((SQUARE, 3), (RECTANGLE, 3, 4)) is True
-    assert api.less((RECTANGLE, 3, 4), (SQUARE, 3)) is False
-    assert api.less((SQUARE, 2), (RECTANGLE, 1, 4)) is False, "넓이가 같으면 작지 않습니다"
 
 
 @pytest.mark.parametrize(
@@ -238,8 +219,7 @@ def test_b_compare_by_area(api):
     [
         ((RECTANGLE, 3, 4), "Rectangle(12.0)"),
         ((SQUARE, 3), "Square(9.0)"),
-        ((TRIANGLE, 3, 5), "Triangle(7.5)"),
-        ((TRIANGLE, 1, 1), "Triangle(0.5)"),
+        ((RECTANGLE, 1, 1), "Rectangle(1.0)"),
     ],
 )
 def test_b_print(api, shape, expected):
